@@ -1,6 +1,7 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings,SettingsConfigDict
 from logging import DEBUG
 from typing import Literal
+
 class Settings(BaseSettings):
     """
     Nastavení aplikace načítané z .env souboru.
@@ -9,7 +10,7 @@ class Settings(BaseSettings):
     app_name: str = "Base Backend Application"
     version: str = "1.0.0"
     description: str = "Backend application with authentication and RBAC"
-    logging_level: Literal[10] = DEBUG
+    logging_level: int = 40
     database_url: str = "sqlite:///./database.db"
     #Admin uživatel
     admin_name: str = "admin"
@@ -21,7 +22,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
 
     # CORS nastavení
-    allow_origins: list[str] = ["*"]  # V produkci specifikuj
+    allow_origins: list[str] = ["http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000"]
 
     #Redis nastavení
     redis_host: str = "localhost"
@@ -37,11 +41,7 @@ class Settings(BaseSettings):
     smtp_from_name: str = "App"
 
     #Nastavení Pydantic
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "extra": "ignore"
-    }
+    model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8',extra='ignore')
 
 def get_settings() -> Settings:
     return Settings()

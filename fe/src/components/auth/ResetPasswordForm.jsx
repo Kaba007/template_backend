@@ -62,7 +62,7 @@ export const ResetPasswordForm = () => {
     setLoading(true);
 
     try {
-      await api.post(`/auth/${user.client_id}/reset-password`, {
+      await api.post(`/api/v1/auth/${user.client_id}/reset-password`, {
         password: formData.password,
         new_password: formData.new_password,
         new_password_confirm: formData.new_password_confirm,

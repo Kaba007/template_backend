@@ -111,38 +111,39 @@ def register_middlewares(app: FastAPI) -> None:
     logger.info("Middlewares registered")
 
 
-def register_routers(app: FastAPI) -> None:
+def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
     """Registruje všechny API routers."""
     from backend.core.routers import auth,users,roles,modules,redis
     from backend.apps.email import router as email_router
+    prefix_arg=f"/{prefix_}/{version}"
     app.include_router(
         auth.router,
-        prefix=f"/auth",
+        prefix=f"{prefix_arg}/auth",
         tags=["Authentication"]
     )
     app.include_router(
         users.router,
-        prefix=f"/users",
+         prefix=f"{prefix_arg}/users",
         tags=["Users"]
         )
     app.include_router(
         roles.router,
-        prefix=f"/roles",
+        prefix=f"{prefix_arg}/roles",
         tags=["Roles"]
         )
     app.include_router(
         modules.router,
-        prefix=f"/roles",
+        prefix=f"{prefix_arg}/modules",
         tags=["Modules"]
         )
     app.include_router(
         redis.router,
-        prefix=f"/redis",
+        prefix=f"{prefix_arg}/redis",
         tags=["Redis Management"]
     )
     app.include_router(
         email_router.router,
-        prefix="/email",
+        prefix=f"{prefix_arg}/email",
         tags=["Email"]
     )
     logger.info("Routers registered")

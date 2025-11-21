@@ -25,7 +25,7 @@ export const ProfilePage = () => {
         setRefreshing(true);
       }
 
-      const response = await api.get('/auth/me');
+      const response = await api.get('/api/v1/auth/me');
       setUserDetails(response.data);
     } catch (error) {
       console.error('Error fetching user details:', error);
