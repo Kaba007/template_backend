@@ -83,6 +83,7 @@ def create_base_modules(db: Session) -> list[Module]:
         {"name": "users", "description": "User management module"},
         {"name": "roles", "description": "Role management module"},
         {"name": "modules", "description": "Module management module"},
+        {"name": "email", "description": "Emial management module"},
     ]
 
     created_modules = []

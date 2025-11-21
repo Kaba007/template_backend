@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List,Dict, Set
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHash
@@ -52,7 +52,22 @@ def get_password_hash(password: str) -> str:
     """
     return ph.hash(password.strip())
 
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Ověří heslo proti hashi.
 
+    Args:
+        plain_password: Heslo v plain textu
+        hashed_password: Argon2 hash hesla
+
+    Returns:
+        True pokud heslo odpovídá, jinak False
+    """
+    try:
+        ph.verify(hashed_password.strip(), plain_password.strip())
+        return True
+    except (VerifyMismatchError, VerificationError, InvalidHash):
+        return False
 # JWT Token utilities
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Vytvoří JWT access token."""
@@ -250,6 +265,74 @@ class PermissionChecker:
 
         return current_user
 
+
+def get_user_permissions(user: User, db: Session) -> Dict[str, List[str]]:
+    """
+    Vrátí všechna oprávnění uživatele seskupená podle modulů.
+
+    Args:
+        user: User objekt
+        db: Database session
+
+    Returns:
+        Dictionary s permissions v požadovaném formátu
+    """
+    # Dictionary pro seskupení oprávnění podle modulů
+    # Použijeme Set pro automatické odstranění duplicit
+    module_permissions: Dict[str, Set[str]] = {}
+
+    # Procházíme všechny role uživatele
+    for user_role_link in user.user_role_links:
+        role = user_role_link.role
+
+        # Přeskočíme neaktivní role
+        if not role.is_active:
+            continue
+
+        # Procházíme všechny moduly přiřazené k roli
+        for role_module_link in role.role_module_links:
+            module = role_module_link.module
+
+            # Přeskočíme neaktivní moduly
+            if not module.is_active:
+                continue
+
+            # Pokud modul ještě není v dictionary, vytvoříme pro něj Set
+            if module.name not in module_permissions:
+                module_permissions[module.name] = set()
+
+            # Přidáme oprávnění do Setu (automaticky se vyřeší duplicity)
+            module_permissions[module.name].add(role_module_link.permission.value)
+
+    # Převedeme na požadovaný formát
+    permissions_list = [
+        {
+            "module_name": module_name,
+            "permissions": sorted(list(perms))  # Seřadíme pro konzistenci
+        }
+        for module_name, perms in sorted(module_permissions.items())  # Seřadíme moduly
+    ]
+
+    return permissions_list
+
+def get_user_info_with_permissions(user: User, db: Session) -> dict:
+    """
+    Vrátí kompletní informace o uživateli včetně oprávnění.
+
+    Args:
+        user: User objekt
+        db: Database session
+
+    Returns:
+        Dictionary s kompletními informacemi o uživateli
+    """
+    return {
+        "valid": True,
+        "user_id": user.id,
+        "client_id": user.client_id,
+        "is_active": user.is_active,
+        "permissions": get_user_permissions(user, db)
+    }
 
 def require_permissions(module_name: str, permission: PermissionType):
     """

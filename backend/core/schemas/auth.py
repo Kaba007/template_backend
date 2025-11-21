@@ -115,7 +115,27 @@ class LoginResponse(BaseModel):
 
 
 # Permission Schemas
+class ModulePermissions(BaseModel):
+    """Oprávnění pro jeden modul."""
+    module_name: str
+    permissions: List[str]  # ["read", "write", "admin"]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserPermissionsResponse(BaseModel):
+    """Kompletní response s oprávněními uživatele."""
+    valid: bool
+    user_id: int
+    client_id: str
+    is_active: bool
+    permissions: List[ModulePermissions]
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserPermission(BaseModel):
+    """Deprecated - použij ModulePermissions místo."""
     module_name: str
     permissions: List[PermissionType]
 
@@ -173,3 +193,17 @@ class RoleModuleLinkPublic(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class ResetPasswordRequest(BaseModel):
+    password: Optional[str] = Field(None, description="Current password (required for own password change)")
+    new_password: str = Field(..., min_length=8, description="New password (min 8 characters)")
+    new_password_confirm: str = Field(..., description="New password confirmation")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "password": "old_password",
+                "new_password": "new_secure_password",
+                "new_password_confirm": "new_secure_password"
+            }
+        }
