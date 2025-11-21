@@ -6,7 +6,7 @@ from email import encoders
 from typing import List, Optional
 import logging
 from pathlib import Path
-
+from backend.apps.email.schemas import ForgotPasswordRequest, ForgotPasswordResponse
 from backend.core.config import get_settings
 
 settings = get_settings()

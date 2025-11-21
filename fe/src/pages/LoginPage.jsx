@@ -87,6 +87,20 @@ export const LoginPage = () => {
             />
           </div>
 
+          {/* Forgot password link */}
+          <div className="flex items-center justify-end -mt-2">
+            <a
+              href="/forgot-password"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/forgot-password');
+              }}
+              className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+            >
+              Zapomněli jste heslo?
+            </a>
+          </div>
+
           <Button
             type="submit"
             disabled={loading}
@@ -111,7 +125,14 @@ export const LoginPage = () => {
         <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           <p>
             Máte problémy s přihlášením?{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium">
+            <a
+              href="#"
+              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('/forgot-password');
+              }}
+            >
               Kontaktujte podporu
             </a>
           </p>
