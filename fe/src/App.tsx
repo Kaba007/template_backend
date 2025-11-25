@@ -2,8 +2,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout';
 import { AuthProvider } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { DashboardPage } from './pages/DashboardPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { LeadsKanbanPage } from "./pages/KanbanPage";
+import { LeadsPage } from './pages/LeadsPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
@@ -12,6 +15,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
         <Routes>
           {/* Veřejné routy - BEZ layoutu */}
           <Route path="/login" element={<LoginPage />} />
@@ -85,7 +89,38 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/leads"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <LeadsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+            <Route
+            path="/kanban"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <LeadsKanbanPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
+          // Pro vytvoření nového leadu s předvyplněným klientem
+          <Route
+            path="/leads/create"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <LeadsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
           {/* Profil - vidí každý */}
           <Route
             path="/profile"
@@ -105,6 +140,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Routes>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

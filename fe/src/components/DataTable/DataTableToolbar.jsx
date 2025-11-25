@@ -1,5 +1,5 @@
 import { Button, Dropdown, DropdownItem } from 'flowbite-react';
-import { HiDocumentDownload, HiPlus, HiRefresh, HiTrash } from 'react-icons/hi';
+import { HiDocumentDownload, HiPlus, HiRefresh, HiTrash, HiX } from 'react-icons/hi';
 
 export const DataTableToolbar = ({
   title,
@@ -9,6 +9,8 @@ export const DataTableToolbar = ({
   onRefresh,
   onCreate,
   actions,
+  hasActiveFilters,
+  onClearFilters,
 }) => {
   return (
     <div className="flex items-center justify-between">
@@ -37,6 +39,18 @@ export const DataTableToolbar = ({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* NOVÉ: Tlačítko pro vymazání filtrů */}
+        {hasActiveFilters && (
+          <Button
+            size="sm"
+            color="light"
+            onClick={onClearFilters}
+          >
+            <HiX className="mr-2 h-4 w-4" />
+            Zrušit filtry
+          </Button>
+        )}
+
         {/* Export dropdown */}
         {actions.export !== false && (
           <Dropdown

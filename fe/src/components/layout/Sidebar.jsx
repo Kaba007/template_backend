@@ -55,7 +55,7 @@ export const Sidebar = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <FlowbiteSidebar aria-label="Hlavní navigace" className="flex-1">
+      <FlowbiteSidebar aria-label="Hlavní navigace" className="flex-1" collapsed={false}>
         <SidebarItems>
           {/* Hlavní navigace */}
           <SidebarItemGroup>

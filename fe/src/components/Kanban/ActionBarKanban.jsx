@@ -1,6 +1,6 @@
 import { Sidebar, SidebarItemGroup, SidebarItems, Tooltip } from 'flowbite-react';
 
-export const ActionBar = ({ selectedItem, actions = [] }) => {
+export const ActionBarKanban = ({ selectedItem, actions = [] }) => {
   const hasSelection = !!selectedItem;
 
   return (
@@ -8,7 +8,7 @@ export const ActionBar = ({ selectedItem, actions = [] }) => {
       <SidebarItems>
         <SidebarItemGroup>
           {/* Vertikální offset + Nadpis */}
-          <div className="pt-24">
+          <div className="pt-13">
             <div className="px-2 pb-4 mb-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-center">
                 Rychlé akce
@@ -19,7 +19,7 @@ export const ActionBar = ({ selectedItem, actions = [] }) => {
             {actions.map((action, index) => (
               <Tooltip
                 key={index}
-                content={hasSelection ? action.label : 'Vyberte záznam'}
+                content={hasSelection ? action.label : 'Vyberte kartu'}
                 placement="left"
               >
                 <div className="flex justify-center mb-2">

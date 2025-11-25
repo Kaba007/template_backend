@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-export const useDataTable = (initialData, itemsPerPage = 10) => {
+export const useDataTable = (initialData, itemsPerPage = 10, onRefresh) => {
   const [data, setData] = useState(initialData);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState(null);
@@ -94,7 +94,10 @@ export const useDataTable = (initialData, itemsPerPage = 10) => {
   };
 
   const refreshData = async () => {
-    // Pro refresh dat - caller může předat callback
+    // OPRAVA: Zavolej callback pro refresh dat
+    if (onRefresh) {
+      await onRefresh();
+    }
     setCurrentPage(1);
   };
 

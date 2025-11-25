@@ -1,10 +1,12 @@
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'flowbite-react';
 import { useState } from 'react';
 import api from '../../api/client';
+import { useToast } from '../../contexts/ToastContext';
 
 export const DeleteModal = ({ open, item, onClose, onConfirm, endpoint }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { showToast } = useToast();
 
   const handleDelete = async () => {
     if (!endpoint || !item) return;
@@ -14,11 +16,14 @@ export const DeleteModal = ({ open, item, onClose, onConfirm, endpoint }) => {
 
     try {
       await api.delete(`${endpoint}/${item.id}`);
+      showToast('success', 'Záznam byl úspěšně smazán');
       onConfirm?.();
       onClose();
     } catch (err) {
       console.error('Delete error:', err);
-      setError(err.response?.data?.message || err.message || 'Chyba při mazání');
+      const errorMsg = err.response?.data?.message || err.message || 'Chyba při mazání';
+      setError(errorMsg);
+      showToast('error', errorMsg);
     } finally {
       setLoading(false);
     }
