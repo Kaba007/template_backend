@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
+import { UsersPage } from './pages/UsersPage';
 function App() {
   return (
     <BrowserRouter>
@@ -49,10 +50,7 @@ function App() {
             element={
               <ProtectedRoute requirePermission="users.read">
                 <Layout>
-                  <div>
-                    <h1 className="text-3xl font-bold mb-4">Uživatelé</h1>
-                    <p className="text-gray-600">Seznam uživatelů.</p>
-                  </div>
+                  <UsersPage />
                 </Layout>
               </ProtectedRoute>
             }
