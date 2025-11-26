@@ -1,6 +1,7 @@
 import { Button, Card, Label, Select, TextInput } from 'flowbite-react';
 import { useState } from 'react';
 import { HiFilter, HiX } from 'react-icons/hi';
+import { AsyncSelectFilter } from '../filters/AjaxSelect';
 
 export const KanbanFilters = ({ filters, defaultFilters = {}, currentFilters = {}, onApplyFilters }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -110,6 +111,17 @@ export const KanbanFilters = ({ filters, defaultFilters = {}, currentFilters = {
               placeholder={placeholder || `Hledat ${label.toLowerCase()}...`}
             />
           </div>
+        );
+
+      // ✅ Nový typ: async-select s vyhledáváním
+      case 'async-select':
+        return (
+          <AsyncSelectFilter
+            key={key}
+            filter={filter}
+            value={tempFilters[key] || ''}
+            onChange={(value) => handleFilterChange(key, value)}
+          />
         );
 
       default:

@@ -171,12 +171,12 @@ async def get_current_user(
     if payload is None:
         raise credentials_exception
 
-    client_id: str = payload.get("sub")
-    if client_id is None:
+    email: str = payload.get("sub")
+    if email is None:
         raise credentials_exception
 
     # Načti uživatele z DB
-    user = db.query(User).filter(User.client_id == client_id).first()
+    user = db.query(User).filter(User.email == email).first()
     if user is None:
         raise credentials_exception
 
@@ -345,7 +345,7 @@ def require_permissions(module_name: str, permission: PermissionType):
 
 
 # Login endpoint helper
-async def authenticate_user(client_id: str, client_secret: str, db: Session) -> Optional[User]:
+async def authenticate_user(email: str, client_secret: str, db: Session) -> Optional[User]:
     """
     Ověří uživatele podle client_id a client_secret.
 
@@ -357,7 +357,7 @@ async def authenticate_user(client_id: str, client_secret: str, db: Session) -> 
     Returns:
         User objekt pokud jsou credentials validní, jinak None
     """
-    user = db.query(User).filter(User.client_id == client_id).first()
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
     if not verify_password(client_secret, user.client_secret):

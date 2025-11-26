@@ -1,11 +1,12 @@
 import { Label, Select, Textarea, TextInput, ToggleSwitch } from 'flowbite-react';
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
+import { AsyncSelectFilter } from '../filters/AjaxSelect';
 
 export const FormField = ({ column, value, onChange, error }) => {
   const { key, label, type, required, placeholder, options, disabled, helpText } = column;
 
-  // Pro AJAX select
+  // Pro AJAX select (starý typ - načte vše najednou)
   const [ajaxOptions, setAjaxOptions] = useState([]);
   const [ajaxLoading, setAjaxLoading] = useState(false);
   const [ajaxError, setAjaxError] = useState(null);
@@ -97,6 +98,7 @@ export const FormField = ({ column, value, onChange, error }) => {
           </Select>
         );
 
+      // Starý AJAX - načte všechny options najednou
       case 'ajax':
         return (
           <div>
@@ -123,6 +125,25 @@ export const FormField = ({ column, value, onChange, error }) => {
               </p>
             )}
           </div>
+        );
+
+      // Nový ASYNC SELECT - vyhledává dynamicky
+      case 'async-select':
+        return (
+          <AsyncSelectFilter
+            filter={{
+              key,
+              label,
+              endpoint: column.endpoint,
+              valueKey: column.optionValue || 'id',
+              labelKey: column.optionLabel || 'name',
+              queryParamKey: column.queryParamKey || column.optionLabel || 'name',
+              placeholder: placeholder,
+              minChars: column.minChars || 2,
+            }}
+            value={value}
+            onChange={onChange}
+          />
         );
 
       case 'boolean':
@@ -199,6 +220,20 @@ export const FormField = ({ column, value, onChange, error }) => {
 
   // Full-width pro textarea
   const fullWidth = type === 'textarea';
+
+  // Pro async-select nepotřebujeme Label (má vlastní)
+  if (type === 'async-select') {
+    return (
+      <div className={fullWidth ? 'md:col-span-2' : ''}>
+        {renderField()}
+        {error && (
+          <p className="mt-1 text-sm text-red-600 dark:text-red-500">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={fullWidth ? 'md:col-span-2' : ''}>

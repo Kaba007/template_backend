@@ -1,8 +1,8 @@
 import { Spinner } from 'flowbite-react';
 import { useEffect, useState } from 'react';
 import {
-    HiOutlineDocumentAdd,
-    HiOutlineViewList
+  HiOutlineDocumentAdd,
+  HiOutlineViewList
 } from 'react-icons/hi';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
@@ -101,18 +101,20 @@ export const UsersPage = () => {
       },
 
       // -------------------- AJAX SELECT (dynamický) --------------------
-      {
+        {
         key: 'department_id',
         label: 'Oddělení',
-        type: 'ajax',
+        type: 'async-select',  // <-- změna zde
         sortable: true,
         required: false,
         editable: true,
-        endpoint: '/api/v1/modules', // Endpoint pro načtení dat
-        optionValue: 'id',                // Klíč pro value z API odpovědi
-        optionLabel: 'name',              // Klíč pro label z API odpovědi
+        endpoint: '/api/v1/modules',
+        optionValue: 'id',
+        optionLabel: 'name',
+        queryParamKey: 'name',  // Query parametr pro vyhledávání (volitelné)
+        minChars: 2,            // Minimální počet znaků (volitelné, default 2)
         helpText: 'Oddělení, ke kterému uživatel patří',
-      },
+        },
 
       // -------------------- TEXTAREA --------------------
       {
@@ -346,7 +348,7 @@ export const UsersPage = () => {
       icon: HiOutlineDocumentAdd,
       color: 'blue',
       onClick: (user) => {
-        navigate(`/leads/create?client_id=${user.client_id}`);
+        navigate(`/leads/create?user_id=${user.id}`);
       },
     },
     {
@@ -362,7 +364,7 @@ export const UsersPage = () => {
       icon: HiOutlineViewList,
       color: 'purple',
       onClick: (user) => {
-        navigate(`/leads?client_id=${user.client_id}`);
+        navigate(`/leads?user_id=${user.id}`);
       },
     },
     {

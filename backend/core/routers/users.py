@@ -1,6 +1,6 @@
 # routers/modules.py
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status,Query
 from sqlalchemy.orm import Session
 
 from backend.core.services.auth import get_current_user, require_permissions, get_password_hash
@@ -8,7 +8,7 @@ from backend.core.db import get_db
 from backend.core.models.auth import User, PermissionType, Role, UserRoleLink
 from backend.core.schemas.auth import UserCreate, UserUpdate, UserPublic, UserWithRoles,UserRoleAssignment,RolePublic
 from backend.core.middleware.rate_limiter import create_rate_limiter
-
+from backend.core.utils.search import apply_dynamic_filters,get_filter_params
 router = APIRouter()
 user_limiter = create_rate_limiter(requests=100, window=60, prefix="user_limiter")
 
@@ -21,11 +21,12 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
+    filters: dict = Depends(get_filter_params()),
     current_user: User = Depends(get_current_user)
 ):
     """Vrátí seznam uživatelů."""
-    users = db.query(User).offset(skip).limit(limit).all()
-    return users
+    query = apply_dynamic_filters(db.query(User), User, filters)
+    return query.offset(skip).limit(limit).all()
 
 
 @router.post(

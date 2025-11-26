@@ -2,6 +2,28 @@ import { Badge } from 'flowbite-react';
 
 export const DataTableCell = ({ column, value, row }) => {
   const renderCell = () => {
+    // Pokud má sloupec enrichment, použij enriched hodnotu
+    if (column.enrich) {
+      const displayValue = row[`_display_${column.key}`];
+
+      if (displayValue) {
+        if (column.enrich.showAsBadge) {
+          return (
+            <Badge color="info" title={`ID: ${value}`}>
+              {displayValue}
+            </Badge>
+          );
+        }
+
+        return (
+          <span title={`ID: ${value}`} className="cursor-help">
+            {displayValue}
+          </span>
+        );
+      }
+      return value || '-';
+    }
+
     // Custom render funkce
     if (column.render) {
       return column.render(value, row);
@@ -63,8 +85,8 @@ export const DataTableCell = ({ column, value, row }) => {
       case 'link':
         const linkHref = column.getHref ? column.getHref(value, row) : value;
         const linkText = column.formatValue ? column.formatValue(value) : value;
-        return value ? (
-          <a
+        return value ? (<a
+
             href={linkHref}
             target="_blank"
             rel="noopener noreferrer"

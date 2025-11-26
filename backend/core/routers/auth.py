@@ -30,23 +30,23 @@ async def login(
     db: Session = Depends(get_db)
 ):
     """Login endpoint - vytvoří JWT a uloží ho do session cookie."""
-    user = await authenticate_user(login_data.client_id, login_data.client_secret, db)
+    user = await authenticate_user(login_data.email, login_data.client_secret, db)
 
     if not user:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            content={"message": "Incorrect client_id or client_secret"}
+            content={"message": "Incorrect emial or password"}
         )
 
     # Vytvoř JWT token
-    access_token = create_access_token(data={"sub": user.client_id})
+    access_token = create_access_token(data={"sub": user.email})
 
     # Ulož token do session cookie
     set_session_token(request, access_token)
 
     return LoginResponse(
         message="Login successful",
-        user_id=user.client_id,
+        user_id=user.id,
         access_token=access_token,
         expires_in=settings.access_token_expire_minutes
     )

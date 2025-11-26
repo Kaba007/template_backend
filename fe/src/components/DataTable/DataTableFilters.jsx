@@ -1,43 +1,94 @@
 import { Button, Card, Label, Select, TextInput } from 'flowbite-react';
 import { useState } from 'react';
 import { HiFilter, HiX } from 'react-icons/hi';
+import { useSearchParams } from 'react-router-dom';
+import { AsyncSelectFilter } from '../filters/AjaxSelect';
 
-export const DataTableFilters = ({ filters, onApplyFilters }) => {
-  const [filterValues, setFilterValues] = useState({});
+export const DataTableFilters = ({
+  filters,
+  // Callback když se změní filtry (volitelný - pro případné side effects)
+  onFiltersChange,
+}) => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
+  const [tempFilters, setTempFilters] = useState({});
+
+  // Při otevření panelu načti aktuální hodnoty z URL
+  const handleOpen = () => {
+    const currentFilters = {};
+    filters.forEach(filter => {
+      const value = searchParams.get(filter.key);
+      if (value !== null) {
+        currentFilters[filter.key] = value;
+      }
+    });
+    setTempFilters(currentFilters);
+    setIsOpen(true);
+  };
 
   const handleFilterChange = (filterKey, value) => {
-    setFilterValues(prev => ({
+    setTempFilters(prev => ({
       ...prev,
       [filterKey]: value,
     }));
   };
 
+  // Aplikovat filtry = aktualizovat URL
   const handleApply = () => {
-    onApplyFilters(filterValues);
+    const newParams = new URLSearchParams();
+
+    // Zachovat existující parametry, které nejsou filtry
+    searchParams.forEach((value, key) => {
+      const isFilterKey = filters.some(f => f.key === key);
+      if (!isFilterKey) {
+        newParams.set(key, value);
+      }
+    });
+
+    // Přidat nové hodnoty filtrů
+    Object.entries(tempFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        newParams.set(key, value);
+      }
+    });
+
+    setSearchParams(newParams);
+    onFiltersChange?.(tempFilters);
+    setIsOpen(false);
   };
 
+  // Reset filtrů = odstranit z URL
   const handleReset = () => {
-    setFilterValues({});
-    onApplyFilters({});
+    const newParams = new URLSearchParams();
+
+    // Zachovat pouze parametry, které nejsou filtry
+    searchParams.forEach((value, key) => {
+      const isFilterKey = filters.some(f => f.key === key);
+      if (!isFilterKey) {
+        newParams.set(key, value);
+      }
+    });
+
+    setSearchParams(newParams);
+    setTempFilters({});
+    onFiltersChange?.({});
+    setIsOpen(false);
   };
 
   const renderFilterField = (filter) => {
-    const { key, label, type, options } = filter;
+    const { key, label, type, options, placeholder, endpoint, valueKey, labelKey, queryParamKey, minChars } = filter;
 
     switch (type) {
       case 'text':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key}>
-              {label}
-            </Label>
+            <Label htmlFor={key}>{label}</Label>
             <TextInput
               id={key}
               type="text"
-              value={filterValues[key] || ''}
+              value={tempFilters[key] || ''}
               onChange={(e) => handleFilterChange(key, e.target.value)}
-              placeholder={`Hledat ${label.toLowerCase()}...`}
+              placeholder={placeholder || `Hledat ${label.toLowerCase()}...`}
             />
           </div>
         );
@@ -45,14 +96,13 @@ export const DataTableFilters = ({ filters, onApplyFilters }) => {
       case 'select':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key}>
-              {label}
-            </Label>
+            <Label htmlFor={key}>{label}</Label>
             <Select
               id={key}
-              value={filterValues[key] || ''}
+              value={tempFilters[key] || ''}
               onChange={(e) => handleFilterChange(key, e.target.value)}
             >
+              <option value="">Vše</option>
               {options?.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -62,16 +112,33 @@ export const DataTableFilters = ({ filters, onApplyFilters }) => {
           </div>
         );
 
+      case 'boolean':
+        return (
+          <div key={key} className="space-y-2">
+            <Label htmlFor={key}>{label}</Label>
+            <Select
+              id={key}
+              value={tempFilters[key] !== undefined ? tempFilters[key].toString() : ''}
+              onChange={(e) => {
+                const value = e.target.value;
+                handleFilterChange(key, value === '' ? undefined : value);
+              }}
+            >
+              <option value="">Vše</option>
+              <option value="true">Ano</option>
+              <option value="false">Ne</option>
+            </Select>
+          </div>
+        );
+
       case 'date':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key}>
-              {label}
-            </Label>
+            <Label htmlFor={key}>{label}</Label>
             <TextInput
               id={key}
               type="date"
-              value={filterValues[key] || ''}
+              value={tempFilters[key] || ''}
               onChange={(e) => handleFilterChange(key, e.target.value)}
             />
           </div>
@@ -80,17 +147,25 @@ export const DataTableFilters = ({ filters, onApplyFilters }) => {
       case 'number':
         return (
           <div key={key} className="space-y-2">
-            <Label htmlFor={key}>
-              {label}
-            </Label>
+            <Label htmlFor={key}>{label}</Label>
             <TextInput
               id={key}
               type="number"
-              value={filterValues[key] || ''}
+              value={tempFilters[key] || ''}
               onChange={(e) => handleFilterChange(key, e.target.value)}
-              placeholder={`Hledat ${label.toLowerCase()}...`}
+              placeholder={placeholder || `Zadejte ${label.toLowerCase()}...`}
             />
           </div>
+        );
+
+      case 'async-select':
+        return (
+          <AsyncSelectFilter
+            key={key}
+            filter={filter}
+            value={tempFilters[key] || ''}
+            onChange={(value) => handleFilterChange(key, value)}
+          />
         );
 
       default:
@@ -98,15 +173,17 @@ export const DataTableFilters = ({ filters, onApplyFilters }) => {
     }
   };
 
-  const activeFiltersCount = Object.keys(filterValues).filter(
-    key => filterValues[key] && filterValues[key] !== ''
-  ).length;
+  // Počet aktivních filtrů z URL
+  const activeFiltersCount = filters.filter(f => {
+    const value = searchParams.get(f.key);
+    return value !== null && value !== '';
+  }).length;
 
   return (
     <div>
       <Button
         color="light"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => isOpen ? setIsOpen(false) : handleOpen()}
         className="mb-4"
       >
         <HiFilter className="mr-2 h-5 w-5" />
@@ -119,7 +196,7 @@ export const DataTableFilters = ({ filters, onApplyFilters }) => {
       </Button>
 
       {isOpen && (
-        <Card>
+        <Card className="mb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {filters.map((filter) => renderFilterField(filter))}
           </div>

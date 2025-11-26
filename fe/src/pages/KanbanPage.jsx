@@ -11,7 +11,7 @@ import {
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { KanbanBoard } from '../components/Kanban/KanbanBoard';
-
+import { useToast } from '../contexts/ToastContext';
 // Definice klíčů filtrů - na jednom místě
 const FILTER_KEYS = ['is_active', 'source', 'company', 'client_id', 'min_value', 'max_value'];
 
@@ -26,7 +26,7 @@ export const LeadsKanbanPage = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-
+  const { showToast } = useToast();
   // Načti filtry z URL
   const currentFilters = useMemo(() => {
     const filters = {};
@@ -99,10 +99,12 @@ export const LeadsKanbanPage = () => {
       });
       console.log('✅ Lead deactivated:', lead.id);
       // Refresh dat
+      showToast('success', 'Lead byl úspěšně zneplatněn');
       await fetchLeads();
     } catch (err) {
       console.error('Error deactivating lead:', err);
       alert('Chyba při zneplatnění leadu');
+      showToast('error', 'Error při zneplatnění leadu');
     }
   }, [fetchLeads]);
 
@@ -119,19 +121,20 @@ export const LeadsKanbanPage = () => {
       // 3. Přidej [DUPLICITA] k názvu
       const newLead = {
         ...leadData,
-        title: `[DUPLICITA] ${leadData.title}`,
+        title: `[KOPIE] ${leadData.title}`,
         status: 'new', // Nový lead začíná vždy jako "new"
       };
 
       // 4. Vytvoř nový lead
       await api.post('/api/v1/leads', newLead);
       console.log('✅ Lead duplicated:', lead.id);
-
+      showToast('success', 'Lead byl úspěšně duplikován');
       // 5. Refresh dat
       await fetchLeads();
     } catch (err) {
       console.error('Error duplicating lead:', err);
       alert('Chyba při duplikování leadu');
+      showToast('error', 'Error při duplikování leadu');
     }
   }, [fetchLeads]);
 
@@ -188,7 +191,7 @@ export const LeadsKanbanPage = () => {
         placeholder: 'např. ACME Corp.',
       },
       {
-        key: 'client_id',
+        key: 'user_id',
         label: 'Klient',
         type: 'text',
         required: false,
@@ -304,7 +307,17 @@ export const LeadsKanbanPage = () => {
         ],
       },
       { key: 'company', label: 'Firma', type: 'text', placeholder: 'Hledat podle firmy...' },
-      { key: 'client_id', label: 'Klient', type: 'text', placeholder: 'Hledat podle klienta...' },
+      {
+        key: 'user_id',
+        label: 'Vlastník',
+        type: 'async-select',
+        endpoint: '/api/v1/users',
+        valueKey: 'id',
+        labelKey: 'client_id',
+        queryParamKey: 'client_id',           // Nebo 'name', podle tvého API
+        placeholder: 'Začněte psát jméno klienta...',
+        minChars: 2,
+      },
       { key: 'min_value', label: 'Min. hodnota', type: 'number', placeholder: '0' },
       { key: 'max_value', label: 'Max. hodnota', type: 'number', placeholder: '1000000' },
     ],

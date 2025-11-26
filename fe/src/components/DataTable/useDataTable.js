@@ -14,22 +14,49 @@ export const useDataTable = (initialData, itemsPerPage = 10, onRefresh) => {
   const filteredData = useMemo(() => {
     let filtered = [...data];
 
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== '') {
-        filtered = filtered.filter(item => {
-          const itemValue = item[key];
-
-          if (typeof itemValue === 'string') {
-            return itemValue.toLowerCase().includes(value.toLowerCase());
-          }
-
-          if (typeof itemValue === 'number') {
-            return itemValue === Number(value);
-          }
-
-          return itemValue === value;
-        });
+    Object.entries(filters).forEach(([key, filterValue]) => {
+      // Přeskočit prázdné hodnoty
+      if (filterValue === undefined || filterValue === null || filterValue === '') {
+        return;
       }
+
+      filtered = filtered.filter(item => {
+        const itemValue = item[key];
+
+        // Null/undefined v datech
+        if (itemValue === null || itemValue === undefined) {
+          return false;
+        }
+
+        // Boolean filtr
+        if (typeof filterValue === 'boolean') {
+          return itemValue === filterValue;
+        }
+
+        // Boolean jako string ("true"/"false")
+        if (filterValue === 'true' || filterValue === 'false') {
+          const boolValue = filterValue === 'true';
+          return itemValue === boolValue;
+        }
+
+        // String filtr - LIKE vyhledávání
+        if (typeof itemValue === 'string' && typeof filterValue === 'string') {
+          return itemValue.toLowerCase().includes(filterValue.toLowerCase());
+        }
+
+        // Number filtr
+        if (typeof itemValue === 'number') {
+          const numFilter = Number(filterValue);
+          if (!isNaN(numFilter)) {
+            return itemValue === numFilter;
+          }
+          // Pokud filterValue není číslo, zkus string match
+          return String(itemValue).includes(String(filterValue));
+        }
+
+        // Fallback - přesná shoda
+        return String(itemValue).toLowerCase().includes(String(filterValue).toLowerCase());
+      });
     });
 
     return filtered;
@@ -90,11 +117,10 @@ export const useDataTable = (initialData, itemsPerPage = 10, onRefresh) => {
 
   const applyFilters = (newFilters) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset na první stránku
+    setCurrentPage(1);
   };
 
   const refreshData = async () => {
-    // OPRAVA: Zavolej callback pro refresh dat
     if (onRefresh) {
       await onRefresh();
     }

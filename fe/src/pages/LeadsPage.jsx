@@ -1,6 +1,6 @@
 // src/pages/LeadsPage.jsx
 import { Spinner } from 'flowbite-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { DataTable } from '../components/DataTable/DataTable';
@@ -11,63 +11,65 @@ export const LeadsPage = () => {
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
 
-  // Načtení dat z API
-  useEffect(() => {
-    fetchLeads();
+  // Fetch data z API - parametry se berou přímo z URL
+  const fetchLeads = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // Sestavit query string přímo z URL search params
+      const queryString = searchParams.toString();
+      const url = `/api/v1/leads${queryString ? `?${queryString}` : ''}`;
+
+      console.log('🌐 Fetching URL:', url);
+
+      const response = await api.get(url);
+      setLeads(response.data);
+    } catch (err) {
+      setError(err.message);
+      console.error('Error fetching leads:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [searchParams]);
 
-const fetchLeads = async (filters) => {
-  try {
-    setLoading(true);
-
-    console.log('📡 Fetching leads with filters:', filters); // ✅ Debug log
-
-    // Sestavit query string z filtrů
-    const queryParams = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        queryParams.append(key, value);
-      }
-    });
-
-    const queryString = queryParams.toString();
-    const url = `/api/v1/leads${queryString ? `?${queryString}` : ''}`;
-
-    console.log('🌐 Fetching URL:', url); // ✅ Debug log
-
-    const response = await api.get(url);
-    setLeads(response.data);
-  } catch (err) {
-    setError(err.message);
-    console.error('Error fetching leads:', err);
-  } finally {
-    setLoading(false);
-  }
-};
+  // Načtení dat při změně URL parametrů
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
 
   const tableConfig = {
     title: 'Správa Leadů',
 
+    // Filtrování probíhá na backendu (API dostává query params)
+    serverSideFiltering: true,
+
     columns: [
       {
-        key: 'lead_id',
-        label: 'Lead ID',
+        key: 'id',
+        label: 'ID',
         type: 'number',
         sortable: true,
         editable: false,
         showInTable: true,
       },
       {
-        key: 'client_id',
-        label: 'Client ID',
-        type: 'ajax',
+        key: 'user_id',
+        label: 'Uživatel',
+        type: 'async-select',
         sortable: true,
         required: false,
         editable: true,
-        endpoint: '/api/v1/users', // Endpoint pro načtení dat
-        optionValue: 'client_id',                // Klíč pro value z API odpovědi
-        optionLabel: 'client_id',              // Klíč pro label z API odpovědi
+        endpoint: '/api/v1/users',
+        optionValue: 'id',
+        optionLabel: 'client_id',
+        queryParamKey: 'client_id',
         showInTable: true,
+        enrich: {
+          endpoint: '/api/v1/users',
+          foreignKey: 'id',
+          displayField: 'client_id',
+          showAsBadge: false,
+        },
       },
       {
         key: 'title',
@@ -135,21 +137,32 @@ const fetchLeads = async (filters) => {
 
     filters: [
       {
-        key: 'client_id',
-        label: 'Client ID',
-        type: 'text',
+        key: 'user_id',
+        label: 'Vlastník',
+        type: 'async-select',
+        endpoint: '/api/v1/users',
+        valueKey: 'id',
+        labelKey: 'client_id',
+        queryParamKey: 'client_id',
+        placeholder: 'Začněte psát jméno klienta...',
+        minChars: 2,
       },
       {
         key: 'status',
         label: 'Status',
         type: 'select',
         options: [
-          { value: '', label: 'Všechny' },
           { value: 'new', label: 'Nový' },
           { value: 'contacted', label: 'Kontaktován' },
           { value: 'qualified', label: 'Kvalifikován' },
           { value: 'lost', label: 'Ztracen' },
         ],
+      },
+      {
+        key: 'title',
+        label: 'Název',
+        type: 'text',
+        placeholder: 'Hledat v názvu...',
       },
     ],
 
@@ -161,12 +174,11 @@ const fetchLeads = async (filters) => {
       export: true,
     },
 
-    onDataChange: () => {
-      fetchLeads();
-    },
+    // Refresh dat po změnách
+    onDataChange: fetchLeads,
   };
 
-  if (loading) {
+  if (loading && leads.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Spinner size="xl" />
