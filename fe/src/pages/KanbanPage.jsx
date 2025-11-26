@@ -1,31 +1,87 @@
 import { Spinner } from 'flowbite-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  HiBan,
   HiCurrencyDollar,
   HiDocument,
   HiMail,
   HiPhone,
   HiUser
 } from 'react-icons/hi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { KanbanBoard } from '../components/Kanban/KanbanBoard';
+
+// Definice klíčů filtrů - na jednom místě
+const FILTER_KEYS = ['is_active', 'source', 'company', 'client_id', 'min_value', 'max_value'];
+
+// Default filtry
+const DEFAULT_FILTERS = {
+  is_active: true,
+};
 
 export const LeadsKanbanPage = () => {
   const [loading, setLoading] = useState(true);
   const [leads, setLeads] = useState([]);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // Načtení dat z API
-  useEffect(() => {
-    fetchLeads();
-  }, []);
+  // Načti filtry z URL
+  const currentFilters = useMemo(() => {
+    const filters = {};
 
-  const fetchLeads = async () => {
+    FILTER_KEYS.forEach(key => {
+      const value = searchParams.get(key);
+      if (value !== null) {
+        if (value === 'true') {
+          filters[key] = true;
+        } else if (value === 'false') {
+          filters[key] = false;
+        } else {
+          filters[key] = value;
+        }
+      }
+    });
+
+    if (Object.keys(filters).length === 0) {
+      return DEFAULT_FILTERS;
+    }
+
+    return filters;
+  }, [searchParams]);
+
+  // Ulož filtry do URL
+  const applyFilters = useCallback((newFilters) => {
+    const params = new URLSearchParams();
+
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, String(value));
+      }
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
+
+  // Fetch leads
+  const fetchLeads = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/v1/leads');
+
+      const queryParams = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value);
+        }
+      });
+
+      const queryString = queryParams.toString();
+      const url = `/api/v1/leads${queryString ? `?${queryString}` : ''}`;
+
+      console.log('📡 Fetching leads:', url);
+
+      const response = await api.get(url);
       setLeads(response.data);
     } catch (err) {
       setError(err.message);
@@ -33,79 +89,118 @@ export const LeadsKanbanPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentFilters]);
 
-  // Konfigurace Kanbanu pro Leads
-  const kanbanConfig = {
+  // ✅ Zneplatnit lead (is_active = false)
+  const handleDeactivate = useCallback(async (lead) => {
+    try {
+      await api.patch(`/api/v1/leads/${lead.id}`, {
+        is_active: false
+      });
+      console.log('✅ Lead deactivated:', lead.id);
+      // Refresh dat
+      await fetchLeads();
+    } catch (err) {
+      console.error('Error deactivating lead:', err);
+      alert('Chyba při zneplatnění leadu');
+    }
+  }, [fetchLeads]);
+
+  // ✅ Duplikovat lead
+  const handleDuplicate = useCallback(async (lead) => {
+    try {
+      // 1. Načti aktuální data leadu z DB
+      const response = await api.get(`/api/v1/leads/${lead.id}`);
+      const originalLead = response.data;
+
+      // 2. Připrav data pro nový lead (odstraň ID a upravené timestamps)
+      const { id, created_at, updated_at, converted_at, ...leadData } = originalLead;
+
+      // 3. Přidej [DUPLICITA] k názvu
+      const newLead = {
+        ...leadData,
+        title: `[DUPLICITA] ${leadData.title}`,
+        status: 'new', // Nový lead začíná vždy jako "new"
+      };
+
+      // 4. Vytvoř nový lead
+      await api.post('/api/v1/leads', newLead);
+      console.log('✅ Lead duplicated:', lead.id);
+
+      // 5. Refresh dat
+      await fetchLeads();
+    } catch (err) {
+      console.error('Error duplicating lead:', err);
+      alert('Chyba při duplikování leadu');
+    }
+  }, [fetchLeads]);
+
+  // Načtení dat při změně URL (filtrů)
+  useEffect(() => {
+    fetchLeads();
+  }, [fetchLeads]);
+
+  // Konfigurace Kanbanu
+  const kanbanConfig = useMemo(() => ({
     title: 'Sales Pipeline - Leads',
 
-    // ========================================
-    // DEFINICE SLOUPCŮ (FÁZE PRODEJE)
-    // ========================================
     columns: [
-      {
-        key: 'new',
-        label: 'Nové Leady',
-        color: 'blue',
-        description: 'Nově příchozí leady',
-      },
-      {
-        key: 'contacted',
-        label: 'Kontaktováno',
-        color: 'yellow',
-      },
-      {
-        key: 'proposal',
-        label: 'Nabídka',
-        color: 'pink',
-      },
-
-      {
-        key: 'won',
-        label: 'Vyhráno',
-        color: 'green',
-      },
-      {
-        key: 'lost',
-        label: 'Ztraceno',
-        color: 'red',
-      },
+      { key: 'new', label: 'Nové Leady', color: 'blue' },
+      { key: 'contacted', label: 'Kontaktováno', color: 'yellow' },
+      { key: 'proposal', label: 'Nabídka', color: 'pink' },
+      { key: 'won', label: 'Vyhráno', color: 'green' },
+      { key: 'lost', label: 'Ztraceno', color: 'red' },
     ],
 
-    // ========================================
-    // DEFINICE POLÍ
-    // ========================================
     fields: [
       {
-        key: 'lead_id',
+        key: 'id',
         label: 'Lead ID',
         type: 'number',
         editable: false,
         showInCard: false,
       },
       {
-        key: 'company_name',
-        label: 'Název firmy',
+        key: 'title',
+        label: 'Název',
         type: 'text',
         required: true,
+        editable: true,
+        showInCard: true,
+        placeholder: 'např. Nový projekt',
+      },
+      {
+        key: 'description',
+        label: 'Popis',
+        type: 'textarea',
+        required: false,
+        editable: true,
+        showInCard: true,
+        placeholder: 'Popis leadu...',
+      },
+      {
+        key: 'company',
+        label: 'Firma',
+        type: 'text',
+        required: false,
         editable: true,
         showInCard: true,
         placeholder: 'např. ACME Corp.',
       },
       {
-        key: 'contact_person',
-        label: 'Kontaktní osoba',
+        key: 'client_id',
+        label: 'Klient',
         type: 'text',
-        required: true,
+        required: false,
         editable: true,
         showInCard: true,
-        placeholder: 'Jan Novák',
+        placeholder: 'Jméno klienta',
       },
       {
         key: 'email',
         label: 'Email',
         type: 'email',
-        required: true,
+        required: false,
         editable: true,
         showInCard: true,
         placeholder: 'jan.novak@acme.cz',
@@ -129,9 +224,7 @@ export const LeadsKanbanPage = () => {
         options: [
           { value: 'new', label: 'Nové' },
           { value: 'contacted', label: 'Kontaktováno' },
-          { value: 'qualified', label: 'Kvalifikováno' },
           { value: 'proposal', label: 'Nabídka' },
-          { value: 'negotiation', label: 'Vyjednávání' },
           { value: 'won', label: 'Vyhráno' },
           { value: 'lost', label: 'Ztraceno' },
         ],
@@ -146,16 +239,7 @@ export const LeadsKanbanPage = () => {
         showInCard: true,
         placeholder: '50000',
         helpText: 'Odhadovaná hodnota obchodu v Kč',
-      },
-      {
-        key: 'probability',
-        label: 'Pravděpodobnost uzavření',
-        type: 'percentage',
-        required: false,
-        editable: true,
-        showInCard: true,
-        placeholder: '60',
-        helpText: 'Pravděpodobnost úspěšného uzavření (%)',
+        formatValue: (value) => value ? `${value.toLocaleString('cs-CZ')} Kč` : '0 Kč',
       },
       {
         key: 'source',
@@ -174,47 +258,12 @@ export const LeadsKanbanPage = () => {
         ],
       },
       {
-        key: 'assigned_to_id',
-        label: 'Přiřazeno (ID)',
-        type: 'ajax',
-        required: false,
-        editable: true,
-        showInCard: false,
-        endpoint: '/api/v1/users',
-        optionValue: 'user_id',
-        optionLabel: 'email',
-      },
-      {
-        key: 'assigned_to',
-        label: 'Obchodník',
-        type: 'text',
-        editable: false,
-        showInCard: true,
-      },
-      {
-        key: 'notes',
-        label: 'Poznámky',
-        type: 'textarea',
-        required: false,
-        editable: true,
-        showInCard: false,
-        placeholder: 'Interní poznámky k leadu...',
-      },
-      {
-        key: 'expected_close_date',
-        label: 'Očekávané uzavření',
-        type: 'date',
+        key: 'is_active',
+        label: 'Aktivní',
+        type: 'boolean',
         required: false,
         editable: true,
         showInCard: true,
-      },
-      {
-        key: 'last_contact',
-        label: 'Poslední kontakt',
-        type: 'date',
-        required: false,
-        editable: true,
-        showInCard: false,
       },
       {
         key: 'created_at',
@@ -223,33 +272,55 @@ export const LeadsKanbanPage = () => {
         editable: false,
         showInCard: false,
       },
+      {
+        key: 'updated_at',
+        label: 'Aktualizováno',
+        type: 'datetime',
+        editable: false,
+        showInCard: false,
+      },
+      {
+        key: 'converted_at',
+        label: 'Konvertováno',
+        type: 'datetime',
+        editable: false,
+        showInCard: false,
+      },
     ],
 
-    // ========================================
-    // KONFIGURACE VZHLEDU KARET
-    // ========================================
-    cardConfig: {
-      displayFields: [
-        'company_name',
-        'contact_person',
-        'email',
-        'phone',
-        'value',
-        'probability',
-        'source',
-        'assigned_to',
-        'expected_close_date',
-      ],
+    filters: [
+      { key: 'is_active', label: 'Aktivní', type: 'boolean' },
+      {
+        key: 'source',
+        label: 'Zdroj',
+        type: 'select',
+        options: [
+          { value: 'website', label: '🌐 Web' },
+          { value: 'referral', label: '👥 Doporučení' },
+          { value: 'linkedin', label: '💼 LinkedIn' },
+          { value: 'cold_call', label: '📞 Cold Call' },
+          { value: 'event', label: '🎪 Událost' },
+          { value: 'other', label: '📋 Jiné' },
+        ],
+      },
+      { key: 'company', label: 'Firma', type: 'text', placeholder: 'Hledat podle firmy...' },
+      { key: 'client_id', label: 'Klient', type: 'text', placeholder: 'Hledat podle klienta...' },
+      { key: 'min_value', label: 'Min. hodnota', type: 'number', placeholder: '0' },
+      { key: 'max_value', label: 'Max. hodnota', type: 'number', placeholder: '1000000' },
+    ],
 
-      // Barva podle hodnoty obchodu
+    defaultFilters: DEFAULT_FILTERS,
+    currentFilters,
+    onApplyFilters: applyFilters,
+
+    cardConfig: {
+      displayFields: ['title', 'company', 'client_id', 'email', 'phone', 'value', 'source'],
       cardColor: (item) => {
         if (!item.value) return 'gray';
         if (item.value >= 100000) return 'green';
         if (item.value >= 50000) return 'blue';
         return 'yellow';
       },
-
-      // Ikona podle zdroje
       cardIcon: (item) => {
         switch (item.source) {
           case 'website': return HiMail;
@@ -259,54 +330,38 @@ export const LeadsKanbanPage = () => {
           default: return HiCurrencyDollar;
         }
       },
-
-      // Avatar obchodníka
       showAvatar: true,
       avatarInitials: (item) => {
-        if (!item.assigned_to) return null;
-        return item.assigned_to
-          .split(' ')
-          .map(n => n[0])
-          .join('')
-          .toUpperCase()
-          .substring(0, 2);
+        if (!item.client_id) return null;
+        return item.client_id.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
       },
-      avatarLabel: (item) => item.assigned_to,
-
-      // Extra badges
+      avatarLabel: (item) => item.client_id,
       cardBadges: [
         {
-          field: 'probability',
-          getColor: (value) => {
-            if (value >= 75) return 'success';
-            if (value >= 50) return 'warning';
-            return 'failure';
-          },
-          formatValue: (value) => value ? `${value}% šance` : null,
+          field: 'is_active',
+          getColor: (value) => value ? 'success' : 'failure',
+          formatValue: (value) => value ? 'Aktivní' : 'Neaktivní',
         },
       ],
     },
 
-    // ========================================
-    // DATA A ENDPOINTY
-    // ========================================
     data: leads,
+
+    // ✅ Context akce pro pravý panel
     contextActions: [
       {
-        label: 'Přiřadit mně',
-        icon: HiUser,
-        onClick: (task) => {
-          // Tvoje logika
-        },
+        label: 'Zneplatnit',
+        icon: HiBan,
+        onClick: handleDeactivate,
+        color: 'red', // volitelné - pro styling
       },
       {
         label: 'Duplikovat',
         icon: HiDocument,
-        onClick: (task) => {
-          navigate(`/tasks/create?duplicate=${task.id}`);
-        },
+        onClick: handleDuplicate,
       },
     ],
+
     endpoints: {
       create: '/api/v1/leads',
       update: '/api/v1/leads',
@@ -321,10 +376,9 @@ export const LeadsKanbanPage = () => {
     },
     statusField: 'status',
     onDataChange: fetchLeads,
-  };
+  }), [leads, currentFilters, applyFilters, fetchLeads, handleDeactivate, handleDuplicate]);
 
-  // Loading state
-  if (loading) {
+  if (loading && leads.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Spinner size="xl" />
@@ -333,7 +387,6 @@ export const LeadsKanbanPage = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="p-6">

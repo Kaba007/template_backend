@@ -14,20 +14,27 @@ export const KanbanColumn = ({
   onCardClick,
 }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [draggedItem, setDraggedItem] = useState(null);
+  const [draggingItemId, setDraggingItemId] = useState(null);
 
   // Handler pro začátek tažení
   const handleDragStart = (e, item) => {
-    setDraggedItem(item);
+    setDraggingItemId(item.id);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', e.target);
-    e.dataTransfer.setData('itemId', item.id.toString());
-    e.dataTransfer.setData('sourceColumn', column.key);
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      itemId: item.id,
+      sourceColumn: column.key
+    }));
+
+    // Malé zpoždění pro lepší vizuální efekt
+    requestAnimationFrame(() => {
+      e.target.style.opacity = '0.5';
+    });
   };
 
   // Handler pro konec tažení
   const handleDragEnd = (e) => {
-    setDraggedItem(null);
+    setDraggingItemId(null);
+    e.target.style.opacity = '1';
   };
 
   // Handler pro vstup do drop zóny
@@ -39,7 +46,14 @@ export const KanbanColumn = ({
 
   // Handler pro opuštění drop zóny
   const handleDragLeave = (e) => {
-    setIsDraggingOver(false);
+    // Kontrola, zda opouštíme skutečně celou drop zónu
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setIsDraggingOver(false);
+    }
   };
 
   // Handler pro drop
@@ -47,16 +61,20 @@ export const KanbanColumn = ({
     e.preventDefault();
     setIsDraggingOver(false);
 
-    const itemId = parseInt(e.dataTransfer.getData('itemId'));
-    const sourceColumn = e.dataTransfer.getData('sourceColumn');
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+      const { itemId, sourceColumn } = data;
 
-    if (sourceColumn === column.key) {
-      // Přesun ve stejném sloupci - nic neděláme
-      return;
+      if (sourceColumn === column.key) {
+        // Přesun ve stejném sloupci - nic neděláme
+        return;
+      }
+
+      // Zavoláme callback pro změnu stavu
+      onDrop(itemId, column.key, sourceColumn);
+    } catch (err) {
+      console.error('Drop error:', err);
     }
-
-    // Zavoláme callback pro změnu stavu
-    onDrop(itemId, column.key, sourceColumn);
   };
 
   // Barva sloupce
@@ -116,10 +134,10 @@ export const KanbanColumn = ({
         onDrop={handleDrop}
         className={`
           flex-1 p-4 space-y-3 rounded-b-lg
-          border-2 border-dashed transition-colors
+          border-2 border-dashed transition-all duration-200
           overflow-y-auto
           ${isDraggingOver
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10'
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/10 scale-[1.02]'
             : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900'
           }
           ${column.limit && items.length >= column.limit
@@ -140,6 +158,7 @@ export const KanbanColumn = ({
               draggable
               onDragStart={(e) => handleDragStart(e, item)}
               onDragEnd={handleDragEnd}
+              className="transition-transform duration-200"
             >
               <KanbanCard
                 item={item}
@@ -147,7 +166,7 @@ export const KanbanColumn = ({
                 cardConfig={cardConfig}
                 onEdit={onEdit}
                 onDelete={onDelete}
-                isDragging={draggedItem?.id === item.id}
+                isDragging={draggingItemId === item.id}
                 isHighlighted={selectedCard?.id === item.id}
                 onClick={() => onCardClick?.(item)}
               />

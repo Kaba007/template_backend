@@ -23,8 +23,11 @@ export const KanbanCard = ({
     );
   }
 
-  // Built-in rendering
-  const displayFields = cardConfig.displayFields || fields.filter(f => f.showInCard !== false);
+  // Built-in rendering - OPRAVA: musíme najít field definice podle klíčů
+  const displayFieldKeys = cardConfig.displayFields || fields.filter(f => f.showInCard !== false).map(f => f.key);
+  const displayFields = displayFieldKeys.map(key =>
+    typeof key === 'string' ? fields.find(f => f.key === key) : key
+  ).filter(Boolean);
 
   // Určit barvu karty
   const getCardColor = () => {
@@ -71,7 +74,7 @@ export const KanbanCard = ({
 
       case 'date':
         return value ? (
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {new Date(value).toLocaleDateString('cs-CZ')}
           </span>
         ) : null;
@@ -83,10 +86,21 @@ export const KanbanCard = ({
           </Badge>
         );
 
-      default:
+      case 'currency':
         return (
-          <span className="text-sm text-gray-700 dark:text-gray-300">
-            {field.formatValue ? field.formatValue(value) : value}
+          <span className="text-sm text-gray-700 dark:text-gray-300 font-semibold truncate">
+            {field.formatValue ? field.formatValue(value) : `${value} Kč`}
+          </span>
+        );
+
+      default:
+        const displayValue = field.formatValue ? field.formatValue(value) : value;
+        return (
+          <span
+            className="text-sm text-gray-700 dark:text-gray-300 truncate block"
+            title={displayValue}
+          >
+            {displayValue}
           </span>
         );
     }
@@ -95,31 +109,32 @@ export const KanbanCard = ({
   // Ikona v kartě
   const CardIcon = cardConfig.cardIcon ? cardConfig.cardIcon(item) : null;
 
-  return (
+    return (
     <Card
-      onClick={onClick}
-      className={`
-        cursor-move hover:shadow-lg transition-all
+        onClick={onClick}
+        className={`
+        cursor-move hover:shadow-lg transition-shadow
         border-l-4 ${getBorderColor()}
-        ${isDragging ? 'opacity-50 rotate-2' : ''}
         ${isHighlighted ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20' : ''}
-      `}
+        `}
     >
       {/* Header s ikonou a akcemi */}
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2 flex-1">
-          {CardIcon && <CardIcon className="h-5 w-5 text-gray-500" />}
+      <div className="flex items-start justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          {CardIcon && <CardIcon className="h-5 w-5 text-gray-500 flex-shrink-0" />}
 
           {/* Hlavní pole (title nebo první displayField) */}
           {displayFields[0] && (
-            <div className="flex-1 font-semibold text-gray-900 dark:text-white">
-              {renderField(displayFields[0])}
+            <div className="flex-1 font-semibold text-gray-900 dark:text-white min-w-0">
+              <div className="truncate" title={item[displayFields[0].key]}>
+                {renderField(displayFields[0])}
+              </div>
             </div>
           )}
         </div>
 
         {/* Akce */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-shrink-0">
           {onEdit && (
             <Button
               size="xs"
@@ -156,13 +171,13 @@ export const KanbanCard = ({
           if (!value && value !== 0 && value !== false) return null;
 
           return (
-            <div key={field.key} className="flex items-center gap-2">
+            <div key={field.key} className="flex items-center gap-2 min-w-0">
               {field.label && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 min-w-[60px]">
+                <span className="text-xs text-gray-500 dark:text-gray-400 min-w-[60px] flex-shrink-0">
                   {field.label}:
                 </span>
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 {renderField(field)}
               </div>
             </div>
@@ -171,11 +186,11 @@ export const KanbanCard = ({
       </div>
 
       {/* Badges (pokud jsou definované) */}
-      {cardConfig.cardBadges && (
+      {cardConfig.cardBadges && cardConfig.cardBadges.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {cardConfig.cardBadges.map((badgeConfig, index) => {
             const value = item[badgeConfig.field];
-            if (!value) return null;
+            if (value === null || value === undefined) return null;
 
             const color = badgeConfig.getColor ? badgeConfig.getColor(value) : 'info';
             const displayValue = badgeConfig.formatValue ? badgeConfig.formatValue(value) : value;
@@ -189,22 +204,22 @@ export const KanbanCard = ({
         </div>
       )}
 
-      {/* Avatar (pokud je definovaný) */}
-      {cardConfig.showAvatar && cardConfig.avatarField && (
+      {/* Avatar (pokud je definovaný) - OPRAVENO */}
+      {cardConfig.showAvatar && cardConfig.avatarInitials && (
         <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
           {cardConfig.avatarUrl?.(item) ? (
             <img
               src={cardConfig.avatarUrl(item)}
               alt=""
-              className="w-6 h-6 rounded-full"
+              className="w-6 h-6 rounded-full flex-shrink-0"
             />
-          ) : cardConfig.avatarInitials?.(item) ? (
-            <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-semibold">
+          ) : cardConfig.avatarInitials(item) ? (
+            <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-semibold flex-shrink-0">
               {cardConfig.avatarInitials(item)}
             </div>
           ) : null}
           {cardConfig.avatarLabel && (
-            <span className="text-xs text-gray-600 dark:text-gray-400">
+            <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
               {cardConfig.avatarLabel(item)}
             </span>
           )}

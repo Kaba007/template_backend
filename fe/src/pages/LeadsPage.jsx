@@ -16,25 +16,34 @@ export const LeadsPage = () => {
     fetchLeads();
   }, [searchParams]);
 
-  const fetchLeads = async () => {
-    try {
-      setLoading(true);
-      const clientId = searchParams.get('client_id');
+const fetchLeads = async (filters) => {
+  try {
+    setLoading(true);
 
-      // Pokud je client_id v URL, filtruj podle něj
-      const url = clientId
-        ? `/api/v1/leads?client_id=${clientId}`
-        : '/api/v1/leads';
+    console.log('📡 Fetching leads with filters:', filters); // ✅ Debug log
 
-      const response = await api.get(url);
-      setLeads(response.data);
-    } catch (err) {
-      setError(err.message);
-      console.error('Error fetching leads:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Sestavit query string z filtrů
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        queryParams.append(key, value);
+      }
+    });
+
+    const queryString = queryParams.toString();
+    const url = `/api/v1/leads${queryString ? `?${queryString}` : ''}`;
+
+    console.log('🌐 Fetching URL:', url); // ✅ Debug log
+
+    const response = await api.get(url);
+    setLeads(response.data);
+  } catch (err) {
+    setError(err.message);
+    console.error('Error fetching leads:', err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const tableConfig = {
     title: 'Správa Leadů',

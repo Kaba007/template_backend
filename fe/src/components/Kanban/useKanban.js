@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 
-export const useKanban = (initialData, columns, statusField, endpoints, onDataChange) => {
+export const useKanban = (
+  initialData,
+  columns,
+  statusField,
+  endpoints,
+  onDataChange
+) => {
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -29,7 +35,7 @@ export const useKanban = (initialData, columns, statusField, endpoints, onDataCh
       return false;
     }
 
-    // Optimistic update - okamžitě aktualizujeme UI
+    // Optimistic update
     const updatedData = data.map(item =>
       item.id === itemId
         ? { ...item, [statusField]: newStatus }
@@ -41,12 +47,11 @@ export const useKanban = (initialData, columns, statusField, endpoints, onDataCh
     setError(null);
 
     try {
-      // Zavoláme API pro update stavu
       await api.patch(`${endpoints.updateStatus}/${itemId}`, {
         [statusField]: newStatus,
       });
 
-      // Zavoláme callback pro refresh (volitelné)
+      // Refresh data - onDataChange se postará o načtení s aktuálními filtry z URL
       onDataChange?.();
 
       return true;
@@ -54,7 +59,7 @@ export const useKanban = (initialData, columns, statusField, endpoints, onDataCh
       console.error('Status change error:', err);
       setError(err.response?.data?.message || 'Chyba při změně stavu');
 
-      // Rollback - vrátíme zpět původní stav
+      // Rollback
       const rolledBackData = data.map(item =>
         item.id === itemId
           ? { ...item, [statusField]: oldStatus }
@@ -68,17 +73,9 @@ export const useKanban = (initialData, columns, statusField, endpoints, onDataCh
     }
   };
 
-  // Refresh dat z API
-  const refreshData = async () => {
-    if (onDataChange) {
-      await onDataChange();
-    }
-  };
-
-  // Filtrace dat (pro budoucí rozšíření)
-  const applyFilters = (filters) => {
-    // TODO: Implementovat filtry podobně jako v useDataTable
-    console.log('Filters:', filters);
+  // Refresh dat - jednoduše zavolá onDataChange
+  const refreshData = () => {
+    onDataChange?.();
   };
 
   return {
@@ -88,7 +85,6 @@ export const useKanban = (initialData, columns, statusField, endpoints, onDataCh
     error,
     handleStatusChange,
     refreshData,
-    applyFilters,
     findItem,
   };
 };

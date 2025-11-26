@@ -4,6 +4,7 @@ import { DeleteModal } from '../Modals/DeleteModal';
 import { FormModal } from '../Modals/FormModal';
 import { ActionBarKanban } from './ActionBarKanban';
 import { KanbanColumn } from './KanbanColumn';
+import { KanbanFilters } from './KanbanFilters';
 import { KanbanToolbar } from './KanbanToolbar';
 import { useKanban } from './useKanban';
 import { useKanbanSelection } from './useKanbanSelection';
@@ -20,16 +21,27 @@ export const KanbanBoard = ({ config }) => {
     title = 'Kanban Board',
     statusField = 'status',
     cardConfig = {},
+    // Filtry
+    filters = [],
+    defaultFilters = {},
+    currentFilters = {},
+    onApplyFilters,
   } = config;
 
-  // Custom hooks pro kanban logiku
+  // Custom hook pro kanban logiku (bez filtrů)
   const {
     groupedData,
     handleStatusChange,
     refreshData,
     loading,
     error,
-  } = useKanban(data, columns, statusField, endpoints, onDataChange);
+  } = useKanban(
+    data,
+    columns,
+    statusField,
+    endpoints,
+    onDataChange
+  );
 
   // Selection hook - jen highlight
   const {
@@ -77,13 +89,23 @@ export const KanbanBoard = ({ config }) => {
   // Po úspěšném create/edit/delete zavolej refresh
   const handleFormSubmit = async () => {
     await refreshData();
-    onDataChange?.();
   };
 
   const handleDeleteConfirm = async () => {
     await refreshData();
-    onDataChange?.();
   };
+
+  // Handler pro vymazání filtrů
+  const handleClearFilters = () => {
+    onApplyFilters?.(defaultFilters);
+  };
+
+  // Kontrola, zda jsou aktivní nějaké filtry (kromě výchozích)
+  const hasActiveFilters = Object.keys(currentFilters).some(key => {
+    const value = currentFilters[key];
+    const defaultValue = defaultFilters[key];
+    return value !== undefined && value !== '' && value !== defaultValue;
+  });
 
   return (
     <div className="flex h-full">
@@ -97,7 +119,19 @@ export const KanbanBoard = ({ config }) => {
           onExport={handleExport}
           actions={actions}
           itemCount={data.length}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={handleClearFilters}
         />
+
+        {/* Filtry - samostatně pod toolbarem */}
+        {filters.length > 0 && onApplyFilters && (
+          <KanbanFilters
+            filters={filters}
+            defaultFilters={defaultFilters}
+            currentFilters={currentFilters}
+            onApplyFilters={onApplyFilters}
+          />
+        )}
 
         {/* Error message */}
         {error && (

@@ -102,12 +102,6 @@ export const FormModal = ({
     <Modal show={open} size="2xl" onClose={onClose}>
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
-
         <DynamicForm
           columns={columns}
           initialValues={formData}
@@ -115,6 +109,12 @@ export const FormModal = ({
           loading={loading}
           onCancel={onClose}
         />
+
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
       </ModalBody>
     </Modal>
   );

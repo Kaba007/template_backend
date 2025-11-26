@@ -1,5 +1,5 @@
 import { Button, Dropdown, DropdownItem } from 'flowbite-react';
-import { HiDocumentDownload, HiPlus, HiRefresh, HiViewBoards } from 'react-icons/hi';
+import { HiDocumentDownload, HiPlus, HiRefresh, HiViewBoards, HiX } from 'react-icons/hi';
 
 export const KanbanToolbar = ({
   title,
@@ -8,9 +8,11 @@ export const KanbanToolbar = ({
   onExport,
   actions,
   itemCount,
+  hasActiveFilters,
+  onClearFilters,
 }) => {
   return (
-    <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center justify-between">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <HiViewBoards className="h-6 w-6 text-gray-600 dark:text-gray-400" />
@@ -27,13 +29,25 @@ export const KanbanToolbar = ({
       </div>
 
       <div className="flex items-center gap-2">
+        {/* Tlačítko pro vymazání filtrů */}
+        {hasActiveFilters && (
+          <Button
+            size="sm"
+            color="light"
+            onClick={onClearFilters}
+          >
+            <HiX className="mr-2 h-4 w-4" />
+            Zrušit filtry
+          </Button>
+        )}
+
         {/* Export dropdown */}
         {actions?.export !== false && onExport && (
           <Dropdown
             label=""
             dismissOnClick={true}
             renderTrigger={() => (
-              <Button color="light" size="sm">
+              <Button color="light">
                 <HiDocumentDownload className="mr-2 h-5 w-5" />
                 Export
               </Button>
@@ -49,13 +63,13 @@ export const KanbanToolbar = ({
         )}
 
         {/* Refresh button */}
-        <Button color="light" size="sm" onClick={onRefresh}>
+        <Button color="light" onClick={onRefresh}>
           <HiRefresh className="h-5 w-5" />
         </Button>
 
         {/* Create button */}
         {onCreate && actions?.create !== false && (
-          <Button color="blue" size="sm" onClick={onCreate}>
+          <Button color="blue" onClick={onCreate}>
             <HiPlus className="mr-2 h-5 w-5" />
             Přidat nový
           </Button>
