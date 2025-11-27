@@ -25,9 +25,8 @@ export const DataTable = ({ config }) => {
     contextActions = [],
     onDataChange,
     title = 'Data',
-    // Nový flag - pokud true, filtrování probíhá na backendu (přes API)
-    // pokud false, filtrování probíhá na frontendu
     serverSideFiltering = true,
+    formSections = [],
   } = config;
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -349,6 +348,7 @@ export const DataTable = ({ config }) => {
           item={formModal.item}
           mode={formModal.mode}
           columns={columns}
+          formSections={formSections}
           onClose={() => setFormModal({ open: false, item: null, mode: 'create' })}
           onSubmit={handleFormSubmit}
           endpoints={endpoints}

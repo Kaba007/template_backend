@@ -10,6 +10,7 @@ export const FormModal = ({
   item,
   mode,
   columns,
+  formSections,
   onClose,
   onSubmit,
   endpoints,
@@ -99,11 +100,12 @@ export const FormModal = ({
   };
 
   return (
-    <Modal show={open} size="2xl" onClose={onClose}>
+    <Modal show={open} size="6xl" onClose={onClose}>
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>
         <DynamicForm
           columns={columns}
+          formSections={formSections}
           initialValues={formData}
           onSubmit={handleSubmit}
           loading={loading}

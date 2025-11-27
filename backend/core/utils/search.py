@@ -26,13 +26,8 @@ def apply_dynamic_filters(query, model: Type[T], params: dict[str, Any]):
             column = getattr(model, field)
             column_type = column_obj.type
 
-            # Pro ID sloupce - přesná shoda
-            if field == 'id' or field.endswith('_id'):
-                # Přímé porovnání (SQLAlchemy si poradí s typem)
-                query = query.filter(column == value)
-
             # Pro enum sloupce - přesná shoda
-            elif isinstance(column_type, SQLAlchemyEnum):
+            if isinstance(column_type, SQLAlchemyEnum):
                 query = query.filter(column == value)
 
             # Pro boolean

@@ -116,6 +116,9 @@ def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
     from backend.core.routers import auth,users,roles,modules,redis
     from backend.apps.email import router as email_router
     from backend.core.routers import leads as leads_router
+    from backend.core.routers.invoices import router as invoices_router
+    from backend.core.routers.customers import router as custemers_router
+
     prefix_arg=f"/{prefix_}/{version}"
     app.include_router(
         auth.router,
@@ -151,6 +154,16 @@ def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
         leads_router.router,
         prefix=f"{prefix_arg}/leads",
         tags=["leads"]
+    )
+    app.include_router(
+        custemers_router,
+        prefix=f"{prefix_arg}/companies",
+        tags=["customers"]
+    )
+    app.include_router(
+        invoices_router,
+        prefix=f"{prefix_arg}/invoices",
+        tags=["invoices"]
     )
     logger.info("Routers registered")
 

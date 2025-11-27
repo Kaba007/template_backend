@@ -3,8 +3,10 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/layout';
 import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { CompaniesPage } from "./pages/CompaniesPage";
 import { DashboardPage } from './pages/DashboardPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { InvoicesPage } from './pages/InvoicesPage';
 import { LeadsKanbanPage } from "./pages/KanbanPage";
 import { LeadsPage } from './pages/LeadsPage';
 import { LoginPage } from './pages/LoginPage';
@@ -99,6 +101,27 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/invoices"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                < InvoicesPage />
+                 </Layout>
+              </ProtectedRoute>
+            }
+          />
+                    <Route
+            path="/companies"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                < CompaniesPage />
+                 </Layout>
+              </ProtectedRoute>
+            }
+          />
+
             <Route
             path="/kanban"
             element={

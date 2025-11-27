@@ -16,9 +16,10 @@ import api from '../../api/client';
  * @param {string} [filter.placeholder] - Placeholder pro input
  * @param {number} [filter.minChars=2] - Minimální počet znaků pro spuštění vyhledávání
  * @param {string} value - Aktuální hodnota (ID)
- * @param {Function} onChange - Callback při změně hodnoty
+ * @param {Function} onChange - Callback při změně hodnoty (value, rawData?)
+ * @param {boolean} [returnFullItem=false] - Pokud true, onChange dostane i celý objekt
  */
-export const AsyncSelectFilter = ({ filter, value, onChange }) => {
+export const AsyncSelectFilter = ({ filter, value, onChange, returnFullItem = false }) => {
   const {
     key,
     label,
@@ -40,33 +41,57 @@ export const AsyncSelectFilter = ({ filter, value, onChange }) => {
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
   const debounceRef = useRef(null);
+  // Ref pro sledování, že výběr právě proběhl (abychom nevolali API zbytečně)
+  const justSelectedRef = useRef(false);
 
   // Načti počáteční hodnotu (label pro již vybrané ID)
-  const loadInitialValue = useCallback(async () => {
-    if (!value) return;
+  const loadInitialValue = useCallback(async (valueToLoad) => {
+    if (!valueToLoad) return;
 
     try {
-      const response = await api.get(`${endpoint}/${value}`);
+      const response = await api.get(`${endpoint}/${valueToLoad}`);
       const data = response.data;
       setDisplayValue(data[labelKey]);
-      setSelectedOption({ value: data[valueKey], label: data[labelKey] });
+      setSelectedOption({
+        value: data[valueKey],
+        label: data[labelKey],
+        raw: data, // Uložíme celý objekt
+      });
     } catch (err) {
       console.error('Error loading initial value:', err);
-      setDisplayValue(String(value)); // Fallback na ID
+      setDisplayValue(String(valueToLoad)); // Fallback na ID
+      setSelectedOption({
+        value: valueToLoad,
+        label: String(valueToLoad),
+        raw: null,
+      });
     }
-  }, [value, endpoint, valueKey, labelKey]);
+  }, [endpoint, valueKey, labelKey]);
 
-  // Načti label pro již vybranou hodnotu při mount/změně value
+  // Synchronizace s externím value prop
   useEffect(() => {
-    if (value && !selectedOption) {
-      loadInitialValue();
+    // Pokud jsme právě vybrali položku, přeskoč API call
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false;
+      return;
     }
-    // Reset když se value vymaže externě
-    if (!value && selectedOption) {
-      setSelectedOption(null);
-      setDisplayValue('');
+
+    // Pokud se value změnilo externě (ne naším výběrem)
+    if (value) {
+      // Máme value, zkontroluj zda odpovídá selectedOption
+      if (!selectedOption || String(selectedOption.value) !== String(value)) {
+        // Value se změnilo - načti data z API
+        loadInitialValue(value);
+      }
+    } else {
+      // Value je prázdné - resetuj
+      if (selectedOption) {
+        setSelectedOption(null);
+        setDisplayValue('');
+      }
     }
-  }, [value, selectedOption, loadInitialValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]); // Záměrně ignorujeme selectedOption - chceme reagovat jen na změnu value
 
   // Zavři dropdown při kliknutí mimo
   useEffect(() => {
@@ -111,7 +136,7 @@ export const AsyncSelectFilter = ({ filter, value, onChange }) => {
       const mappedOptions = items.map(item => ({
         value: item[valueKey],
         label: item[labelKey],
-        raw: item,
+        raw: item, // Celý objekt pro fillFields
       }));
 
       setOptions(mappedOptions);
@@ -141,12 +166,21 @@ export const AsyncSelectFilter = ({ filter, value, onChange }) => {
 
   // Handler pro výběr option
   const handleSelectOption = (option) => {
+    // Označíme, že právě proběhl výběr - useEffect to přeskočí
+    justSelectedRef.current = true;
+
     setSelectedOption(option);
     setDisplayValue(option.label);
     setInputValue('');
     setOptions([]);
     setIsDropdownOpen(false);
-    onChange(option.value);
+
+    // NOVÉ: Pokud returnFullItem nebo fillFields, pošleme i raw data
+    if (returnFullItem) {
+      onChange(option.value, option.raw);
+    } else {
+      onChange(option.value);
+    }
   };
 
   // Handler pro vymazání výběru
@@ -155,7 +189,13 @@ export const AsyncSelectFilter = ({ filter, value, onChange }) => {
     setDisplayValue('');
     setInputValue('');
     setOptions([]);
-    onChange('');
+
+    // Při vymazání pošleme prázdnou hodnotu a null pro raw data
+    if (returnFullItem) {
+      onChange('', null);
+    } else {
+      onChange('');
+    }
   };
 
   // Handler pro focus na input
@@ -223,9 +263,9 @@ export const AsyncSelectFilter = ({ filter, value, onChange }) => {
                 Žádné výsledky
               </div>
             ) : (
-              options.map((option) => (
+              options.map((option, index) => (
                 <button
-                  key={option.value}
+                  key={option.value ?? `option-${index}`}
                   type="button"
                   onClick={() => handleSelectOption(option)}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:bg-gray-100 dark:focus:bg-gray-700"

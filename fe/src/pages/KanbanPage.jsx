@@ -13,7 +13,7 @@ import api from '../api/client';
 import { KanbanBoard } from '../components/Kanban/KanbanBoard';
 import { useToast } from '../contexts/ToastContext';
 // Definice klíčů filtrů - na jednom místě
-const FILTER_KEYS = ['is_active', 'source', 'company', 'client_id', 'min_value', 'max_value'];
+const FILTER_KEYS = ['is_active', 'source', 'company', 'user_id', 'min_value', 'max_value'];
 
 // Default filtry
 const DEFAULT_FILTERS = {
@@ -192,13 +192,23 @@ export const LeadsKanbanPage = () => {
       },
       {
         key: 'user_id',
-        label: 'Klient',
-        type: 'text',
+        label: 'Uživatel',
+        type: 'ajax',
+        sortable: true,
         required: false,
         editable: true,
-        showInCard: true,
-        placeholder: 'Jméno klienta',
-      },
+        endpoint: '/api/v1/users',
+        optionValue: 'id',
+        optionLabel: 'client_id',
+        queryParamKey: 'client_id',
+        showInTable: true,
+        enrich: {
+          endpoint: '/api/v1/users',
+          foreignKey: 'id',
+          displayField: 'client_id',
+          showAsBadge: false,
+        },
+    },
       {
         key: 'email',
         label: 'Email',
@@ -293,19 +303,6 @@ export const LeadsKanbanPage = () => {
 
     filters: [
       { key: 'is_active', label: 'Aktivní', type: 'boolean' },
-      {
-        key: 'source',
-        label: 'Zdroj',
-        type: 'select',
-        options: [
-          { value: 'website', label: '🌐 Web' },
-          { value: 'referral', label: '👥 Doporučení' },
-          { value: 'linkedin', label: '💼 LinkedIn' },
-          { value: 'cold_call', label: '📞 Cold Call' },
-          { value: 'event', label: '🎪 Událost' },
-          { value: 'other', label: '📋 Jiné' },
-        ],
-      },
       { key: 'company', label: 'Firma', type: 'text', placeholder: 'Hledat podle firmy...' },
       {
         key: 'user_id',
@@ -318,8 +315,6 @@ export const LeadsKanbanPage = () => {
         placeholder: 'Začněte psát jméno klienta...',
         minChars: 2,
       },
-      { key: 'min_value', label: 'Min. hodnota', type: 'number', placeholder: '0' },
-      { key: 'max_value', label: 'Max. hodnota', type: 'number', placeholder: '1000000' },
     ],
 
     defaultFilters: DEFAULT_FILTERS,

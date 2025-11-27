@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import { AsyncSelectFilter } from '../filters/AjaxSelect';
 
-export const FormField = ({ column, value, onChange, error }) => {
+export const FormField = ({ column, value, onChange, error, isComputed, formData }) => {
   const { key, label, type, required, placeholder, options, disabled, helpText } = column;
 
   // Pro AJAX select (starý typ - načte vše najednou)
@@ -31,9 +31,11 @@ export const FormField = ({ column, value, onChange, error }) => {
           return {
             value: item[column.optionValue],
             label: item[column.optionLabel],
+            // NOVÉ: Uložíme celý item pro fillFields
+            _rawData: item,
           };
         }
-        return item;
+        return { ...item, _rawData: item };
       });
 
       setAjaxOptions(transformedOptions);
@@ -45,7 +47,27 @@ export const FormField = ({ column, value, onChange, error }) => {
     }
   };
 
+  // Handler pro AJAX select s fillFields podporou
+  const handleAjaxChange = (e) => {
+    const selectedValue = e.target.value;
+    const selectedOption = ajaxOptions.find(opt => String(opt.value) === String(selectedValue));
+
+    // Předáme hodnotu + raw data pro fillFields
+    onChange(selectedValue, selectedOption?._rawData || null);
+  };
+
   const renderField = () => {
+    // Computed field - speciální zobrazení
+    if (isComputed) {
+      return (
+        <div className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+          <span className="text-gray-900 dark:text-white font-medium">
+            {formatComputedValue(value, type)}
+          </span>
+        </div>
+      );
+    }
+
     switch (type) {
       case 'text':
       case 'email':
@@ -98,14 +120,14 @@ export const FormField = ({ column, value, onChange, error }) => {
           </Select>
         );
 
-      // Starý AJAX - načte všechny options najednou
+      // AJAX s podporou fillFields
       case 'ajax':
         return (
           <div>
             <Select
               id={key}
               value={value || ''}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={handleAjaxChange}
               required={required}
               disabled={disabled || ajaxLoading}
               color={error || ajaxError ? 'failure' : undefined}
@@ -127,7 +149,7 @@ export const FormField = ({ column, value, onChange, error }) => {
           </div>
         );
 
-      // Nový ASYNC SELECT - vyhledává dynamicky
+      // Async select s podporou fillFields
       case 'async-select':
         return (
           <AsyncSelectFilter
@@ -142,7 +164,8 @@ export const FormField = ({ column, value, onChange, error }) => {
               minChars: column.minChars || 2,
             }}
             value={value}
-            onChange={onChange}
+            onChange={(newValue, selectedItemData) => onChange(newValue, selectedItemData)}
+            returnFullItem={!!column.fillFields}
           />
         );
 
@@ -202,6 +225,16 @@ export const FormField = ({ column, value, onChange, error }) => {
           </div>
         );
 
+      // Readonly pole (pro fillFields cíle)
+      case 'readonly':
+        return (
+          <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+            <span className="text-gray-700 dark:text-gray-300">
+              {value || '-'}
+            </span>
+          </div>
+        );
+
       default:
         return (
           <TextInput
@@ -218,8 +251,8 @@ export const FormField = ({ column, value, onChange, error }) => {
     }
   };
 
-  // Full-width pro textarea
-  const fullWidth = type === 'textarea';
+  // Full-width pro textarea a array
+  const fullWidth = type === 'textarea' || type === 'array';
 
   // Pro async-select nepotřebujeme Label (má vlastní)
   if (type === 'async-select') {
@@ -248,6 +281,9 @@ export const FormField = ({ column, value, onChange, error }) => {
               *
             </span>
           )}
+          {isComputed && (
+            <span className="ml-2 text-xs text-blue-500 font-normal">(automaticky)</span>
+          )}
         </Label>
         {helpText && (
           <span className="ml-auto text-xs text-gray-500 dark:text-gray-400 italic">
@@ -263,4 +299,20 @@ export const FormField = ({ column, value, onChange, error }) => {
       )}
     </div>
   );
+};
+
+// Helper pro formátování computed hodnot
+const formatComputedValue = (value, type) => {
+  if (value === null || value === undefined) return '-';
+
+  switch (type) {
+    case 'currency':
+      return `${Number(value).toLocaleString('cs-CZ')} Kč`;
+    case 'percentage':
+      return `${value} %`;
+    case 'number':
+      return Number(value).toLocaleString('cs-CZ');
+    default:
+      return String(value);
+  }
 };
