@@ -27,6 +27,7 @@ export const DataTableFilters = ({
   };
 
   const handleFilterChange = (filterKey, value) => {
+    console.log('🔍 handleFilterChange:', filterKey, value); // PŘIDEJ TOTO
     setTempFilters(prev => ({
       ...prev,
       [filterKey]: value,
@@ -35,6 +36,7 @@ export const DataTableFilters = ({
 
   // Aplikovat filtry = aktualizovat URL
   const handleApply = () => {
+    console.log('🚀 Applying filters, tempFilters:', tempFilters); // PŘIDEJ TOTO
     const newParams = new URLSearchParams();
 
     // Zachovat existující parametry, které nejsou filtry

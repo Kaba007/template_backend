@@ -148,7 +148,7 @@ class InvoiceItem(InvoiceItemBase):
 # =====================================================
 class CompanyBase(BaseModel):
     company_type: CompanyType = CompanyType.CUSTOMER
-
+    id :int
     # Základní údaje
     name: str = Field(..., min_length=1, max_length=255)
     legal_name: Optional[str] = None

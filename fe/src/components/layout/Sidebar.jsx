@@ -93,6 +93,16 @@ export const Sidebar = () => {
             <PermissionGuard requireAdmin="users">
               <SidebarItem
                 href="#"
+                icon={HiUsers}
+                onClick={(e) => handleNavigation(e, '/invoices')}
+                active={isActive('/invoices')}
+              >
+                Faktury
+              </SidebarItem>
+            </PermissionGuard>
+            <PermissionGuard requireAdmin="users">
+              <SidebarItem
+                href="#"
                 icon={HiViewBoards}
                 onClick={(e) => handleNavigation(e, '/users')}
                 active={isActive('/users')}

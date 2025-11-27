@@ -240,25 +240,26 @@ export const InvoicesPage = () => {
       // DODAVATEL
       // =====================================================
       {
-        key: 'supplier_id',
-        label: 'Dodavatel',
-        type: 'async-select',
-        sortable: true,
-        required: true,
-        editable: true,
-        showInTable: false,
-        showInForm: true,
-        endpoint: '/api/v1/companies/suppliers',
-        optionValue: 'id',
-        optionLabel: 'name',
-        queryParamKey: 'name',
-        placeholder: 'Vyberte dodavatele...',
+      key: 'supplier_id',
+      label: 'Dodavatel',
+      type: 'async-select',
+      sortable: true,
+      required: true,
+      editable: true,
+      showInTable: false,
+      showInForm: true,
+      endpoint: '/api/v1/companies/suppliers',
+      optionValue: 'id',
+      optionLabel: 'name',
+      queryParamKey: 'name',
+      placeholder: 'Vyberte dodavatele...',
+      formSection: 'supplier',
         enrich: {
           endpoint: '/api/v1/companies/suppliers',
           foreignKey: 'id',
           displayField: 'name',
           showAsBadge: false,
-        },/*
+        },
         fillFields: {
           supplier_name: 'name',
           supplier_legal_name: 'legal_name',
@@ -279,7 +280,6 @@ export const InvoicesPage = () => {
           supplier_bank_iban: 'bank_iban',
           supplier_bank_swift: 'bank_swift',
         },
-        formSection: 'supplier',*/
       },
       // Readonly pole dodavatele
       { key: 'supplier_name', label: 'Název dodavatele', type: 'readonly', showInTable: true, showInForm: true, formSection: 'supplier' },
