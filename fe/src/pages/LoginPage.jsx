@@ -5,8 +5,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export const LoginPage = () => {
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
+  const [email, setClientId] = useState('');
+  const [password, setClientSecret] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, error } = useAuth();
   const navigate = useNavigate();
@@ -19,8 +19,8 @@ export const LoginPage = () => {
     setLoading(true);
 
     const result = await login({
-      client_id: clientId,
-      client_secret: clientSecret
+      email: email,
+      client_secret: password
     });
 
     if (result.success) {
@@ -64,7 +64,7 @@ export const LoginPage = () => {
               type="text"
               icon={HiUser}
               placeholder="Zadejte váš Client ID"
-              value={clientId}
+              value={email}
               onChange={(e) => setClientId(e.target.value)}
               required
               disabled={loading}
@@ -80,7 +80,7 @@ export const LoginPage = () => {
               type="password"
               icon={HiLockClosed}
               placeholder="Zadejte váš Client Secret"
-              value={clientSecret}
+              value={password}
               onChange={(e) => setClientSecret(e.target.value)}
               required
               disabled={loading}

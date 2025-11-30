@@ -40,14 +40,14 @@ class AdminAuthBackend(AuthenticationBackend):
         if not payload:
             return False
 
-        client_id = payload.get("sub")
-        if not client_id:
+        email = payload.get("sub")
+        if not email:
             return False
 
         # Ověř, že uživatel stále existuje a má admin roli
         db: Session = SessionLocal()
         try:
-            user = db.query(User).filter(User.client_id == client_id).first()
+            user = db.query(User).filter(User.email == email).first()
             if not user or not user.is_active:
                 return False
 

@@ -119,7 +119,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     client_id = Column(String(100), unique=True, nullable=False, index=True)
     client_secret = Column(String(255), nullable=False)  # Pro hashed hodnoty
-    email = Column(String(255), index=True)
+    email = Column(String(255),unique=True,index=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, nullable=False)
@@ -249,3 +249,58 @@ class ApiLog(Base):
     def display_name(self):
         status_icon = "✅" if self.status_code < 400 else "❌"
         return f"{status_icon} {self.method} {self.path}"
+
+# Na konec souboru models/auth.py přidej:
+
+class LeadStatus(str, PyEnum):
+    NEW = "new"
+    CONTACTED = "contacted"
+    QUALIFIED = "qualified"
+    CONVERTED = "converted"
+    PROPOSAL = "proposal"
+    WON = "won"
+    LOST = "lost"
+
+
+class Lead(Base):
+    __tablename__ = "leads"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=False, index=True)
+    description = Column(String(2000))
+    status = Column(Enum(LeadStatus), default=LeadStatus.NEW, nullable=False, index=True)
+    value = Column(Float, default=0.0)
+    email = Column(String(255), index=True)
+    phone = Column(String(50))
+    company = Column(String(255))
+    source = Column(String(100))  # odkud lead přišel (web, telefon, email, atd.)
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    converted_at = Column(DateTime, nullable=True)  # kdy byl konvertován na deal
+
+    __table_args__ = (
+        Index('idx_lead_user_id_status', 'user_id', 'status'),
+        Index('idx_lead_status_created', 'status', 'created_at'),
+    )
+
+    # Relationship
+    user = relationship("User", backref="leads", foreign_keys=[user_id])
+
+    def __repr__(self):
+        return f"<Lead(id={self.id}, title='{self.title}', status={self.status}, client_id='{self.client_id}')>"
+
+    def __str__(self):
+        return f"{self.display_name} - {self.title}"
+
+    @property
+    def display_name(self):
+        status_icon = {
+            LeadStatus.NEW: "🆕",
+            LeadStatus.CONTACTED: "📞",
+            LeadStatus.QUALIFIED: "✅",
+            LeadStatus.CONVERTED: "💰",
+            LeadStatus.LOST: "❌"
+        }.get(self.status, "❓")
+        return f"{status_icon} {self.title}"

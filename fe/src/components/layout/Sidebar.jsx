@@ -55,7 +55,7 @@ export const Sidebar = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <FlowbiteSidebar aria-label="Hlavní navigace" className="flex-1">
+      <FlowbiteSidebar aria-label="Hlavní navigace" className="flex-1" collapsed={false}>
         <SidebarItems>
           {/* Hlavní navigace */}
           <SidebarItemGroup>
@@ -72,10 +72,10 @@ export const Sidebar = () => {
               <SidebarItem
                 href="#"
                 icon={HiClipboardList}
-                onClick={(e) => handleNavigation(e, '/tasks')}
-                active={isActive('/tasks')}
+                onClick={(e) => handleNavigation(e, '/leads')}
+                active={isActive('/leads')}
               >
-                Úkoly
+                Leads
               </SidebarItem>
             </PermissionGuard>
 
@@ -83,21 +83,31 @@ export const Sidebar = () => {
               <SidebarItem
                 href="#"
                 icon={HiUsers}
-                onClick={(e) => handleNavigation(e, '/users')}
-                active={isActive('/users')}
+                onClick={(e) => handleNavigation(e, '/companies')}
+                active={isActive('/companies')}
               >
-                Uživatelé
+                Firmy
               </SidebarItem>
             </PermissionGuard>
 
             <PermissionGuard requireAdmin="users">
               <SidebarItem
                 href="#"
-                icon={HiViewBoards}
-                onClick={(e) => handleNavigation(e, '/modules')}
-                active={isActive('/modules')}
+                icon={HiUsers}
+                onClick={(e) => handleNavigation(e, '/invoices')}
+                active={isActive('/invoices')}
               >
-                Moduly
+                Faktury
+              </SidebarItem>
+            </PermissionGuard>
+            <PermissionGuard requireAdmin="users">
+              <SidebarItem
+                href="#"
+                icon={HiViewBoards}
+                onClick={(e) => handleNavigation(e, '/users')}
+                active={isActive('/users')}
+              >
+                Uživatele
               </SidebarItem>
             </PermissionGuard>
           </SidebarItemGroup>

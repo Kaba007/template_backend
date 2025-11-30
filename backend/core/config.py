@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     #Admin uživatel
     admin_name: str = "admin"
     admin_password: str = "admin123"
-    admin_email: str = ""
+    admin_email: str = "admin@admin.com"
     #JWT nastavení
     secret_key: str = "your-secret-key"
     access_token_expire_minutes: int = 60 * 24  # 1 den

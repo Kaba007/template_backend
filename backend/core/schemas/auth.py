@@ -103,13 +103,13 @@ class TokenData(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    client_id: str
+    email: str
     client_secret: str
 
 
 class LoginResponse(BaseModel):
     message: str
-    user_id: str
+    user_id: int
     access_token: str
     expires_in: int
 
@@ -207,3 +207,48 @@ class ResetPasswordRequest(BaseModel):
                 "new_password_confirm": "new_secure_password"
             }
         }
+
+
+# schemas/leads.py
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, Field
+
+
+class LeadBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
+    user_id: int = Field(..., description="ID uživatele, ke kterému lead patří")
+    status: str = Field(default="new")
+    value: Optional[float] = Field(default=0.0, ge=0)
+    email: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
+    company: Optional[str] = Field(None, max_length=255)
+    source: Optional[str] = Field(None, max_length=100)
+    is_active: bool = Field(default=True)
+
+
+class LeadCreate(LeadBase):
+    pass
+
+
+class LeadUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = Field(None, max_length=2000)
+    status: Optional[str] = None
+    value: Optional[float] = Field(None, ge=0)
+    email: Optional[str] = Field(None, max_length=255)
+    phone: Optional[str] = Field(None, max_length=50)
+    company: Optional[str] = Field(None, max_length=255)
+    source: Optional[str] = Field(None, max_length=100)
+    is_active: Optional[bool] = None
+
+
+class LeadPublic(LeadBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    converted_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
