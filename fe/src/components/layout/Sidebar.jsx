@@ -83,8 +83,8 @@ export const Sidebar = () => {
               <SidebarItem
                 href="#"
                 icon={HiUsers}
-                onClick={(e) => handleNavigation(e, '/companies')}
-                active={isActive('/companies')}
+                onClick={(e) => handleNavigation(e, '/companies?is_active=true')}
+                active={isActive('/companies?is_active=true')}
               >
                 Firmy
               </SidebarItem>

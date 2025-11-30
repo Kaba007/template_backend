@@ -26,9 +26,12 @@ export const KanbanBoard = ({ config }) => {
     defaultFilters = {},
     currentFilters = {},
     onApplyFilters,
+    // ✅ FormSections pro modal
+    formSections = [],
+    formModal = {},
   } = config;
 
-  // Custom hook pro kanban logiku (bez filtrů)
+  // Custom hook pro kanban logiku (bez filtrů) + enrichment
   const {
     groupedData,
     handleStatusChange,
@@ -40,7 +43,8 @@ export const KanbanBoard = ({ config }) => {
     columns,
     statusField,
     endpoints,
-    onDataChange
+    onDataChange,
+    fields // ✅ Přidáno pro enrichment async-select polí
   );
 
   // Selection hook - jen highlight
@@ -52,15 +56,15 @@ export const KanbanBoard = ({ config }) => {
 
   // Modal states
   const [deleteModal, setDeleteModal] = useState({ open: false, item: null });
-  const [formModal, setFormModal] = useState({ open: false, item: null, mode: 'create' });
+  const [formModalState, setFormModalState] = useState({ open: false, item: null, mode: 'create' });
 
   // Handlers
   const handleCreate = () => {
-    setFormModal({ open: true, item: null, mode: 'create' });
+    setFormModalState({ open: true, item: null, mode: 'create' });
   };
 
   const handleEdit = (item) => {
-    setFormModal({ open: true, item, mode: 'edit' });
+    setFormModalState({ open: true, item, mode: 'edit' });
   };
 
   const handleDelete = (item) => {
@@ -167,12 +171,15 @@ export const KanbanBoard = ({ config }) => {
           endpoint={endpoints.delete}
         />
 
+        {/* ✅ FormModal s formSections */}
         <FormModal
-          open={formModal.open}
-          item={formModal.item}
-          mode={formModal.mode}
+          open={formModalState.open}
+          item={formModalState.item}
+          mode={formModalState.mode}
           columns={fields}
-          onClose={() => setFormModal({ open: false, item: null, mode: 'create' })}
+          formSections={formSections}
+          formModal={formModal}
+          onClose={() => setFormModalState({ open: false, item: null, mode: 'create' })}
           onSubmit={handleFormSubmit}
           endpoints={endpoints}
         />

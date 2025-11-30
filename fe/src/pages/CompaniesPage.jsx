@@ -4,13 +4,18 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { DataTable } from '../components/DataTable/DataTable';
+import {
+  HiOutlineDocumentAdd,
+  HiOutlineViewList
+} from 'react-icons/hi';
+import { useNavigate } from 'react-router-dom';
 
 export const CompaniesPage = () => {
   const [loading, setLoading] = useState(true);
   const [companies, setCompanies] = useState([]);
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
-
+  const navigate = useNavigate();
   const fetchCompanies = useCallback(async () => {
     try {
       setLoading(true);
@@ -30,9 +35,91 @@ export const CompaniesPage = () => {
     fetchCompanies();
   }, [fetchCompanies]);
 
-  const tableConfig = {
-    title: 'Správa Společností',
+const tableConfig = {
+        title: 'Správa Společností',
     serverSideFiltering: true,
+    formModal: {
+      size: '5xl',
+    },
+    formSections: [
+      {
+        key: 'basic',
+        label: 'Základní údaje',
+        icon: '🏢',
+        columns: 3,
+        defaultOpen: true,
+      },
+      {
+        key: 'identifiers',
+        label: 'Identifikátory',
+        icon: '🔖',
+        columns: 4,
+        defaultOpen: true,
+      },
+      {
+        key: 'vat',
+        label: 'DPH',
+        icon: '💰',
+        columns: 2,
+        defaultOpen: true,
+      },
+      {
+        key: 'contact',
+        label: 'Kontaktní údaje',
+        icon: '📞',
+        columns: 3,
+        defaultOpen: true,
+      },
+      {
+        key: 'billing_address',
+        label: 'Fakturační adresa',
+        icon: '📍',
+        columns: 3,
+        defaultOpen: true,
+      },
+      {
+        key: 'shipping_address',
+        label: 'Doručovací adresa',
+        icon: '📦',
+        columns: 3,
+        defaultOpen: false,
+      },
+      {
+        key: 'bank',
+        label: 'Bankovní spojení',
+        icon: '🏦',
+        columns: 2,
+        defaultOpen: true,
+      },
+      {
+        key: 'bank_additional',
+        label: 'Další bankovní účty',
+        icon: '💳',
+        columns: 1,
+        defaultOpen: false,
+      },
+      {
+        key: 'defaults',
+        label: 'Výchozí nastavení',
+        icon: '⚙️',
+        columns: 4,
+        defaultOpen: false,
+      },
+      {
+        key: 'contact_person',
+        label: 'Kontaktní osoba',
+        icon: '👤',
+        columns: 3,
+        defaultOpen: false,
+      },
+      {
+        key: 'notes',
+        label: 'Poznámky',
+        icon: '📝',
+        columns: 2,
+        defaultOpen: false,
+      },
+    ],
 
     columns: [
       // =====================================================
@@ -49,7 +136,7 @@ export const CompaniesPage = () => {
       },
       {
         key: 'company_type',
-        label: 'Typ',
+        label: 'Typ společnosti',
         type: 'select',
         sortable: true,
         required: true,
@@ -62,6 +149,7 @@ export const CompaniesPage = () => {
           { value: 'both', label: '🔄 Oboje' },
         ],
         defaultValue: 'customer',
+        formSection: 'basic',
       },
       {
         key: 'name',
@@ -73,6 +161,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         placeholder: 'Název společnosti',
+        formSection: 'basic',
       },
       {
         key: 'legal_name',
@@ -83,6 +172,7 @@ export const CompaniesPage = () => {
         showInForm: true,
         placeholder: 'Právní název (pokud se liší)',
         helpText: 'Vyplňte pouze pokud se liší od názvu',
+        formSection: 'basic',
       },
 
       // =====================================================
@@ -97,6 +187,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         placeholder: '12345678',
+        formSection: 'identifiers',
       },
       {
         key: 'dic',
@@ -107,6 +198,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         placeholder: 'CZ12345678',
+        formSection: 'identifiers',
       },
       {
         key: 'vat_id',
@@ -117,6 +209,7 @@ export const CompaniesPage = () => {
         showInForm: true,
         placeholder: 'CZ12345678',
         helpText: 'Pro zahraniční obchod v EU',
+        formSection: 'identifiers',
       },
       {
         key: 'registration_number',
@@ -125,6 +218,8 @@ export const CompaniesPage = () => {
         editable: true,
         showInTable: false,
         showInForm: true,
+        placeholder: 'Další registrační číslo',
+        formSection: 'identifiers',
       },
 
       // =====================================================
@@ -139,6 +234,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         defaultValue: false,
+        formSection: 'vat',
       },
       {
         key: 'vat_mode',
@@ -155,10 +251,11 @@ export const CompaniesPage = () => {
           { value: 'exempt', label: 'Osvobozeno od DPH' },
         ],
         defaultValue: 'without_vat',
+        formSection: 'vat',
       },
 
       // =====================================================
-      // KONTAKT
+      // KONTAKTNÍ ÚDAJE
       // =====================================================
       {
         key: 'email',
@@ -169,6 +266,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         placeholder: 'info@firma.cz',
+        formSection: 'contact',
       },
       {
         key: 'phone',
@@ -178,6 +276,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         placeholder: '+420 123 456 789',
+        formSection: 'contact',
       },
       {
         key: 'website',
@@ -187,6 +286,7 @@ export const CompaniesPage = () => {
         showInTable: false,
         showInForm: true,
         placeholder: 'https://www.firma.cz',
+        formSection: 'contact',
       },
 
       // =====================================================
@@ -235,7 +335,7 @@ export const CompaniesPage = () => {
       },
       {
         key: 'address_country_name',
-        label: 'Země',
+        label: 'Název země',
         type: 'text',
         editable: true,
         showInTable: false,
@@ -250,7 +350,7 @@ export const CompaniesPage = () => {
       // =====================================================
       {
         key: 'shipping_street',
-        label: 'Doruč. ulice',
+        label: 'Ulice',
         type: 'text',
         editable: true,
         showInTable: false,
@@ -261,43 +361,47 @@ export const CompaniesPage = () => {
       },
       {
         key: 'shipping_city',
-        label: 'Doruč. město',
+        label: 'Město',
         type: 'text',
         editable: true,
         showInTable: false,
         showInForm: true,
+        placeholder: 'Brno',
         formSection: 'shipping_address',
       },
       {
         key: 'shipping_zip',
-        label: 'Doruč. PSČ',
+        label: 'PSČ',
         type: 'text',
         editable: true,
         showInTable: false,
         showInForm: true,
+        placeholder: '602 00',
         formSection: 'shipping_address',
       },
       {
         key: 'shipping_country',
-        label: 'Doruč. kód země',
+        label: 'Kód země',
         type: 'text',
         editable: true,
         showInTable: false,
         showInForm: true,
+        placeholder: 'CZ',
         formSection: 'shipping_address',
       },
       {
         key: 'shipping_country_name',
-        label: 'Doruč. země',
+        label: 'Název země',
         type: 'text',
         editable: true,
         showInTable: false,
         showInForm: true,
+        placeholder: 'Česká republika',
         formSection: 'shipping_address',
       },
 
       // =====================================================
-      // BANKOVNÍ ÚDAJE
+      // HLAVNÍ BANKOVNÍ SPOJENÍ
       // =====================================================
       {
         key: 'bank_name',
@@ -342,17 +446,84 @@ export const CompaniesPage = () => {
       {
         key: 'bank_currency',
         label: 'Měna účtu',
-        type: 'text',
+        type: 'select',
         editable: true,
         showInTable: false,
         showInForm: true,
-        placeholder: 'CZK',
+        options: [
+          { value: 'CZK', label: 'CZK' },
+          { value: 'EUR', label: 'EUR' },
+          { value: 'USD', label: 'USD' },
+          { value: 'GBP', label: 'GBP' },
+        ],
         defaultValue: 'CZK',
         formSection: 'bank',
       },
 
       // =====================================================
-      // VÝCHOZÍ NASTAVENÍ
+      // DALŠÍ BANKOVNÍ ÚČTY
+      // =====================================================
+      {
+        key: 'additional_bank_accounts',
+        label: 'Další bankovní účty',
+        type: 'array',
+        editable: true,
+        showInTable: false,
+        showInForm: true,
+        addButtonLabel: 'Přidat účet',
+        helpText: 'Můžete přidat více bankovních účtů (EUR, USD, atd.)',
+        defaultItem: {
+          bank_name: '',
+          account_number: '',
+          iban: '',
+          swift: '',
+          currency: 'EUR',
+        },
+        itemFields: [
+          {
+            key: 'bank_name',
+            label: 'Název banky',
+            type: 'text',
+            placeholder: 'Raiffeisenbank',
+          },
+          {
+            key: 'account_number',
+            label: 'Číslo účtu',
+            type: 'text',
+            placeholder: '123456789/5500',
+          },
+          {
+            key: 'iban',
+            label: 'IBAN',
+            type: 'text',
+            placeholder: 'CZ65 5500 0000 0012 3456 7890',
+          },
+          {
+            key: 'swift',
+            label: 'SWIFT/BIC',
+            type: 'text',
+            placeholder: 'RZBCCZPP',
+          },
+          {
+            key: 'currency',
+            label: 'Měna',
+            type: 'select',
+            options: [
+              { value: 'CZK', label: 'CZK' },
+              { value: 'EUR', label: 'EUR' },
+              { value: 'USD', label: 'USD' },
+              { value: 'GBP', label: 'GBP' },
+              { value: 'PLN', label: 'PLN' },
+              { value: 'CHF', label: 'CHF' },
+            ],
+            defaultValue: 'EUR',
+          },
+        ],
+        formSection: 'bank_additional',
+      },
+
+      // =====================================================
+      // VÝCHOZÍ NASTAVENÍ PRO FAKTURY
       // =====================================================
       {
         key: 'default_currency',
@@ -372,25 +543,25 @@ export const CompaniesPage = () => {
       },
       {
         key: 'default_payment_method',
-        label: 'Výchozí platba',
+        label: 'Výchozí způsob platby',
         type: 'select',
         editable: true,
         showInTable: false,
         showInForm: true,
         options: [
-          { value: 'bank_transfer', label: 'Bankovní převod' },
-          { value: 'cash', label: 'Hotově' },
-          { value: 'card', label: 'Kartou' },
-          { value: 'paypal', label: 'PayPal' },
-          { value: 'crypto', label: 'Kryptoměny' },
-          { value: 'other', label: 'Jiné' },
+          { value: 'bank_transfer', label: '🏦 Bankovní převod' },
+          { value: 'cash', label: '💵 Hotově' },
+          { value: 'card', label: '💳 Kartou' },
+          { value: 'paypal', label: '🅿️ PayPal' },
+          { value: 'crypto', label: '₿ Kryptoměny' },
+          { value: 'other', label: '📋 Jiné' },
         ],
         defaultValue: 'bank_transfer',
         formSection: 'defaults',
       },
       {
         key: 'default_due_days',
-        label: 'Splatnost (dny)',
+        label: 'Výchozí splatnost (dny)',
         type: 'number',
         editable: true,
         showInTable: false,
@@ -401,12 +572,13 @@ export const CompaniesPage = () => {
       },
       {
         key: 'default_vat_rate',
-        label: 'Výchozí DPH %',
-        type: 'percentage',
+        label: 'Výchozí sazba DPH (%)',
+        type: 'number',
         editable: true,
         showInTable: false,
         showInForm: true,
         defaultValue: 21,
+        helpText: 'Výchozí sazba DPH pro faktury',
         formSection: 'defaults',
       },
 
@@ -415,33 +587,33 @@ export const CompaniesPage = () => {
       // =====================================================
       {
         key: 'contact_person',
-        label: 'Kontaktní osoba',
+        label: 'Jméno',
         type: 'text',
         editable: true,
         showInTable: false,
         showInForm: true,
         placeholder: 'Jan Novák',
-        formSection: 'contact',
+        formSection: 'contact_person',
       },
       {
         key: 'contact_email',
-        label: 'Email kontaktu',
+        label: 'Email',
         type: 'email',
         editable: true,
         showInTable: false,
         showInForm: true,
         placeholder: 'jan.novak@firma.cz',
-        formSection: 'contact',
+        formSection: 'contact_person',
       },
       {
         key: 'contact_phone',
-        label: 'Telefon kontaktu',
+        label: 'Telefon',
         type: 'text',
         editable: true,
         showInTable: false,
         showInForm: true,
         placeholder: '+420 123 456 789',
-        formSection: 'contact',
+        formSection: 'contact_person',
       },
 
       // =====================================================
@@ -449,12 +621,13 @@ export const CompaniesPage = () => {
       // =====================================================
       {
         key: 'notes',
-        label: 'Poznámky',
+        label: 'Poznámky (veřejné)',
         type: 'textarea',
         editable: true,
         showInTable: false,
         showInForm: true,
         placeholder: 'Poznámky viditelné na fakturách...',
+        helpText: 'Tyto poznámky se zobrazí na fakturách',
         formSection: 'notes',
       },
       {
@@ -465,6 +638,7 @@ export const CompaniesPage = () => {
         showInTable: false,
         showInForm: true,
         placeholder: 'Interní poznámky (nezobrazí se na fakturách)...',
+        helpText: 'Pouze pro interní potřebu',
         formSection: 'notes',
       },
 
@@ -480,6 +654,7 @@ export const CompaniesPage = () => {
         showInTable: true,
         showInForm: true,
         defaultValue: true,
+        formSection: 'basic',
       },
 
       // =====================================================
@@ -557,6 +732,40 @@ export const CompaniesPage = () => {
       bulkDelete: true,
       export: true,
     },
+      contextActions: [
+      {
+        label: 'Založ Lead',
+        icon: HiOutlineDocumentAdd,
+        color: 'blue',
+        onClick: (company) => {
+          navigate(`/leads/create?user_id=${company.id}`);
+        },
+      },
+      {
+        label: 'Založ Deal',
+        icon: HiOutlineDocumentAdd,
+        color: 'green',
+        onClick: (company) => {
+          navigate(`/deals/create?client_id=${company.client_id}`);
+        },
+      },
+      {
+        label: 'Otevři Leady Kontaktu',
+        icon: HiOutlineViewList,
+        color: 'purple',
+        onClick: (company) => {
+          navigate(`/leads?user_id=${company.id}`);
+        },
+      },
+      {
+        label: 'Otevři Dealy Kontaktu',
+        icon: HiOutlineViewList,
+        color: 'orange',
+        onClick: (company) => {
+          navigate(`/deals?client_id=${company.client_id}`);
+        },
+      },
+    ],
 
     onDataChange: fetchCompanies,
   };

@@ -7,7 +7,8 @@ from datetime import datetime, date
 from backend.core.services.auth import get_current_user, require_permissions
 from backend.core.db import get_db
 from backend.core.models.auth import User, PermissionType
-from backend.core.models.invocie import Invoice, Company, InvoiceSequence, InvoiceType, InvoiceStatus, VatMode
+from backend.core.models.invocie import Invoice, InvoiceSequence, InvoiceType, InvoiceStatus, VatMode
+from backend.core.models.company import  Company
 from backend.core.schemas.invoice import (
     InvoiceCreate, InvoiceUpdate, InvoicePublic, InvoiceListItem
 )

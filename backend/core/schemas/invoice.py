@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
-
+from .utils import VatMode, PaymentMethod
 
 # =====================================================
 # ENUMS
@@ -24,41 +24,6 @@ class InvoiceStatus(str, Enum):
     PARTIALLY_PAID = "partially_paid"
     OVERDUE = "overdue"
     CANCELLED = "cancelled"
-
-
-class PaymentMethod(str, Enum):
-    BANK_TRANSFER = "bank_transfer"
-    CASH = "cash"
-    CARD = "card"
-    PAYPAL = "paypal"
-    CRYPTO = "crypto"
-    OTHER = "other"
-
-
-class VatMode(str, Enum):
-    WITH_VAT = "with_vat"
-    WITHOUT_VAT = "without_vat"
-    REVERSE_CHARGE = "reverse_charge"
-    OSS = "oss"
-    EXEMPT = "exempt"
-
-
-class CompanyType(str, Enum):
-    SUPPLIER = "supplier"
-    CUSTOMER = "customer"
-    BOTH = "both"
-
-
-# =====================================================
-# BANK ACCOUNT
-# =====================================================
-class BankAccount(BaseModel):
-    bank_name: Optional[str] = None
-    account_number: Optional[str] = None
-    iban: Optional[str] = None
-    swift: Optional[str] = None
-    currency: str = "CZK"
-    is_default: bool = False
 
 
 # =====================================================
@@ -144,138 +109,21 @@ class InvoiceItem(InvoiceItemBase):
 
 
 # =====================================================
-# COMPANY SCHEMAS
-# =====================================================
-class CompanyBase(BaseModel):
-    company_type: CompanyType = CompanyType.CUSTOMER
-    id :int
-    # Základní údaje
-    name: str = Field(..., min_length=1, max_length=255)
-    legal_name: Optional[str] = None
-
-    # Identifikátory
-    ico: Optional[str] = Field(None, max_length=20)
-    dic: Optional[str] = Field(None, max_length=20)
-    vat_id: Optional[str] = Field(None, max_length=30)
-    registration_number: Optional[str] = None
-
-    # DPH status
-    is_vat_payer: bool = False
-    vat_mode: VatMode = VatMode.WITHOUT_VAT
-
-    # Kontakt
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    website: Optional[str] = None
-
-    # Fakturační adresa
-    address_street: Optional[str] = None
-    address_city: Optional[str] = None
-    address_zip: Optional[str] = None
-    address_country: str = "CZ"
-    address_country_name: str = "Česká republika"
-
-    # Doručovací adresa
-    shipping_street: Optional[str] = None
-    shipping_city: Optional[str] = None
-    shipping_zip: Optional[str] = None
-    shipping_country: Optional[str] = None
-    shipping_country_name: Optional[str] = None
-
-    # Banka
-    bank_name: Optional[str] = None
-    bank_account: Optional[str] = None
-    bank_iban: Optional[str] = None
-    bank_swift: Optional[str] = None
-    bank_currency: str = "CZK"
-    additional_bank_accounts: List[BankAccount] = Field(default_factory=list)
-
-    # Výchozí nastavení
-    default_currency: str = "CZK"
-    default_payment_method: PaymentMethod = PaymentMethod.BANK_TRANSFER
-    default_due_days: int = 14
-    default_vat_rate: float = 21.0
-
-    # Kontaktní osoba
-    contact_person: Optional[str] = None
-    contact_email: Optional[str] = None
-    contact_phone: Optional[str] = None
-
-    # Poznámky
-    notes: Optional[str] = None
-    internal_notes: Optional[str] = None
-
-    # Metadata
-    tags: List[str] = Field(default_factory=list)
-    custom_fields: Dict[str, Any] = Field(default_factory=dict)
-
-
-class CompanyCreate(CompanyBase):
-    pass
-
-
-class CompanyUpdate(BaseModel):
-    company_type: Optional[CompanyType] = None
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
-    legal_name: Optional[str] = None
-    ico: Optional[str] = None
-    dic: Optional[str] = None
-    vat_id: Optional[str] = None
-    registration_number: Optional[str] = None
-    is_vat_payer: Optional[bool] = None
-    vat_mode: Optional[VatMode] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    website: Optional[str] = None
-    address_street: Optional[str] = None
-    address_city: Optional[str] = None
-    address_zip: Optional[str] = None
-    address_country: Optional[str] = None
-    address_country_name: Optional[str] = None
-    shipping_street: Optional[str] = None
-    shipping_city: Optional[str] = None
-    shipping_zip: Optional[str] = None
-    shipping_country: Optional[str] = None
-    shipping_country_name: Optional[str] = None
-    bank_name: Optional[str] = None
-    bank_account: Optional[str] = None
-    bank_iban: Optional[str] = None
-    bank_swift: Optional[str] = None
-    bank_currency: Optional[str] = None
-    additional_bank_accounts: Optional[List[BankAccount]] = None
-    default_currency: Optional[str] = None
-    default_payment_method: Optional[PaymentMethod] = None
-    default_due_days: Optional[int] = None
-    default_vat_rate: Optional[float] = None
-    contact_person: Optional[str] = None
-    contact_email: Optional[str] = None
-    contact_phone: Optional[str] = None
-    notes: Optional[str] = None
-    internal_notes: Optional[str] = None
-    tags: Optional[List[str]] = None
-    custom_fields: Optional[Dict[str, Any]] = None
-    is_active: Optional[bool] = None
-
-
-class CompanyPublic(CompanyBase):
-
-    class Config:
-        from_attributes = True
-
-
-class CompanySimple(CompanyBase):
-    """Zjednodušená verze pro dropdown"""
-    class Config:
-        from_attributes = True
-
-
-# =====================================================
 # INVOICE SCHEMAS
 # =====================================================
 class InvoiceBase(BaseModel):
+    """Base schema - všechna pole jako optional kromě minimálních požadavků"""
+    
+    # POVINNÁ POLE - pouze to nejnutnější
+    supplier_id: int = Field(..., description="ID dodavatele")
+    customer_id: int = Field(..., description="ID odběratele")
+    issue_date: date = Field(..., description="Datum vystavení")
+    due_date: date = Field(..., description="Datum splatnosti")
+    
+    # VŠE OSTATNÍ JE OPTIONAL
     # Typ a identifikace
-    invoice_type: InvoiceType = InvoiceType.INVOICE
-    invoice_number: Optional[str] = None  # Může být auto-generováno
+    invoice_type: Optional[InvoiceType] = InvoiceType.INVOICE
+    invoice_number: Optional[str] = None  # Auto-generováno
     variable_symbol: Optional[str] = None
     constant_symbol: Optional[str] = None
     specific_symbol: Optional[str] = None
@@ -283,30 +131,24 @@ class InvoiceBase(BaseModel):
     contract_number: Optional[str] = None
     proforma_id: Optional[int] = None
 
-    # Dodavatel a odběratel (ID)
-    supplier_id: int
-    customer_id: int
-
     # Datumy
-    issue_date: date
-    due_date: date
     tax_date: Optional[date] = None
     delivery_date: Optional[date] = None
 
     # Měna a DPH
-    currency: str = "CZK"
-    exchange_rate: float = 1.0
-    vat_mode: VatMode = VatMode.WITH_VAT
+    currency: Optional[str] = "CZK"
+    exchange_rate: Optional[float] = 1.0
+    vat_mode: Optional[VatMode] = VatMode.WITH_VAT
     vat_note: Optional[str] = None
 
     # Platba
-    payment_method: PaymentMethod = PaymentMethod.BANK_TRANSFER
+    payment_method: Optional[PaymentMethod] = PaymentMethod.BANK_TRANSFER
 
     # Položky
-    items: List[InvoiceItem] = Field(default_factory=list)
+    items: Optional[List[InvoiceItem]] = Field(default_factory=list)
 
     # Zaokrouhlení
-    rounding: float = 0.0
+    rounding: Optional[float] = 0.0
 
     # Texty
     header_text: Optional[str] = None
@@ -324,15 +166,27 @@ class InvoiceBase(BaseModel):
     shipping_country_name: Optional[str] = None
 
     # Metadata
-    tags: List[str] = Field(default_factory=list)
-    custom_fields: Dict[str, Any] = Field(default_factory=dict)
+    tags: Optional[List[str]] = Field(default_factory=list)
+    custom_fields: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class InvoiceCreate(InvoiceBase):
+    """
+    Schema pro vytvoření faktury.
+    
+    Minimální požadavky:
+    - supplier_id (ID dodavatele)
+    - customer_id (ID odběratele)
+    - issue_date (datum vystavení)
+    - due_date (datum splatnosti)
+    
+    Vše ostatní je optional a doplní se automaticky nebo má výchozí hodnoty.
+    """
     pass
 
 
 class InvoiceUpdate(BaseModel):
+    """Schema pro aktualizaci - všechna pole jsou optional"""
     invoice_type: Optional[InvoiceType] = None
     invoice_number: Optional[str] = None
     variable_symbol: Optional[str] = None
@@ -374,60 +228,61 @@ class InvoiceUpdate(BaseModel):
 
 
 class InvoicePublic(InvoiceBase):
+    """Schema pro response - obsahuje všechna pole včetně computed"""
     id: int
     status: InvoiceStatus
 
     # Kopie údajů dodavatele
     supplier_name: str
-    supplier_legal_name: Optional[str]
-    supplier_ico: Optional[str]
-    supplier_dic: Optional[str]
-    supplier_vat_id: Optional[str]
+    supplier_legal_name: Optional[str] = None
+    supplier_ico: Optional[str] = None
+    supplier_dic: Optional[str] = None
+    supplier_vat_id: Optional[str] = None
     supplier_is_vat_payer: bool
-    supplier_address_street: Optional[str]
-    supplier_address_city: Optional[str]
-    supplier_address_zip: Optional[str]
-    supplier_address_country: Optional[str]
-    supplier_address_country_name: Optional[str]
-    supplier_email: Optional[str]
-    supplier_phone: Optional[str]
-    supplier_website: Optional[str]
-    supplier_bank_name: Optional[str]
-    supplier_bank_account: Optional[str]
-    supplier_bank_iban: Optional[str]
-    supplier_bank_swift: Optional[str]
+    supplier_address_street: Optional[str] = None
+    supplier_address_city: Optional[str] = None
+    supplier_address_zip: Optional[str] = None
+    supplier_address_country: Optional[str] = None
+    supplier_address_country_name: Optional[str] = None
+    supplier_email: Optional[str] = None
+    supplier_phone: Optional[str] = None
+    supplier_website: Optional[str] = None
+    supplier_bank_name: Optional[str] = None
+    supplier_bank_account: Optional[str] = None
+    supplier_bank_iban: Optional[str] = None
+    supplier_bank_swift: Optional[str] = None
 
     # Kopie údajů odběratele
     customer_name: str
-    customer_legal_name: Optional[str]
-    customer_ico: Optional[str]
-    customer_dic: Optional[str]
-    customer_vat_id: Optional[str]
-    customer_address_street: Optional[str]
-    customer_address_city: Optional[str]
-    customer_address_zip: Optional[str]
-    customer_address_country: Optional[str]
-    customer_address_country_name: Optional[str]
-    customer_email: Optional[str]
-    customer_phone: Optional[str]
+    customer_legal_name: Optional[str] = None
+    customer_ico: Optional[str] = None
+    customer_dic: Optional[str] = None
+    customer_vat_id: Optional[str] = None
+    customer_address_street: Optional[str] = None
+    customer_address_city: Optional[str] = None
+    customer_address_zip: Optional[str] = None
+    customer_address_country: Optional[str] = None
+    customer_address_country_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
 
     # Computed fields
-    paid_date: Optional[date]
-    sent_date: Optional[datetime]
-    paid_amount: float
-    subtotal: float
-    discount_amount: float
-    subtotal_after_discount: float
-    vat_breakdown: Dict[str, Dict[str, float]]
-    total_vat: float
-    total: float
-    total_in_words: Optional[str]
+    paid_date: Optional[date] = None
+    sent_date: Optional[datetime] = None
+    paid_amount: float = 0.0
+    subtotal: float = 0.0
+    discount_amount: float = 0.0
+    subtotal_after_discount: float = 0.0
+    vat_breakdown: Dict[str, Dict[str, float]] = Field(default_factory=dict)
+    total_vat: float = 0.0
+    total: float = 0.0
+    total_in_words: Optional[str] = None
 
-    qr_payment_code: Optional[str]
-    pdf_url: Optional[str]
+    qr_payment_code: Optional[str] = None
+    pdf_url: Optional[str] = None
 
-    created_by: Optional[str]
-    is_active: bool
+    created_by: Optional[str] = None
+    is_active: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -436,4 +291,18 @@ class InvoicePublic(InvoiceBase):
 
 
 class InvoiceListItem(BaseModel):
-    List[InvoicePublic]
+    """Zjednodušená verze pro seznam"""
+    id: int
+    invoice_type: InvoiceType
+    invoice_number: str
+    supplier_name: str
+    customer_name: str
+    issue_date: date
+    due_date: date
+    total: float
+    currency: str
+    status: InvoiceStatus
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
