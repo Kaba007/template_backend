@@ -12,14 +12,14 @@ export const useDataEnrichment = (data, columns) => {
   useEffect(() => {
     const enrichColumns = columns.filter(col => col.enrich);
 
-    // DEBUG
     console.log('🔄 useDataEnrichment triggered:', {
       dataLength: data.length,
       enrichColumnsCount: enrichColumns.length,
       enrichColumns: enrichColumns.map(c => c.key),
     });
 
-    const dataKey = JSON.stringify(data.map(d => d.id));
+    // OPRAVA: Porovnávej celá data, ne jen ID
+    const dataKey = JSON.stringify(data);
     const columnsKey = JSON.stringify(columns.map(c => ({ key: c.key, enrich: c.enrich })));
 
     if (prevDataRef.current === dataKey && prevColumnsRef.current === columnsKey) {
@@ -114,7 +114,6 @@ const enrichData = (data, enrichColumns, cache) => {
       const lookupMap = cache[endpoint];
       const foreignValue = row[column.key];
 
-      // DEBUG pro první řádek
       if (index === 0) {
         console.log(`🔍 Enriching ${column.key}:`, {
           foreignValue,
