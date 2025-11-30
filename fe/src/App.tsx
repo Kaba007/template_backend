@@ -92,7 +92,7 @@ function App() {
             }
           />
           <Route
-            path="/leads"
+            path="/leads/table"
             element={
               <ProtectedRoute requirePermission="users.read">
                 <Layout>
@@ -101,6 +101,17 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/leads/kanban"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <LeadsKanbanPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/invoices"
             element={
@@ -122,16 +133,6 @@ function App() {
             }
           />
 
-            <Route
-            path="/kanban"
-            element={
-              <ProtectedRoute requirePermission="users.read">
-                <Layout>
-                  <LeadsKanbanPage />
-                </Layout>
-              </ProtectedRoute>
-            }
-          />
 
           // Pro vytvoření nového leadu s předvyplněným klientem
           <Route

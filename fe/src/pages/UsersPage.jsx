@@ -7,6 +7,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api from '../api/client';
 import { DataTable } from '../components/DataTable/DataTable';
+
 export const UsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);

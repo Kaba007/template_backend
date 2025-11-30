@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from backend.core.services.auth import get_current_user, require_permissions
 from backend.core.db import get_db
 from backend.core.models.auth import User, PermissionType
-from backend.core.models.invocie import Company, CompanyType
-from backend.core.schemas.invoice import CompanyCreate, CompanyUpdate, CompanyPublic, CompanySimple
+from backend.core.models.company import Company, CompanyType
+from backend.core.schemas.company import CompanyCreate, CompanyUpdate, CompanyPublic, CompanySimple
 from backend.core.utils.search import apply_dynamic_filters, get_filter_params
 
 router = APIRouter()

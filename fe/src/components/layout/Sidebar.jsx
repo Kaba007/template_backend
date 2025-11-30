@@ -8,7 +8,7 @@ import {
   HiOutlinePlusSm,
   HiUser,
   HiUsers,
-  HiViewBoards,
+  HiViewBoards
 } from 'react-icons/hi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { twMerge } from "tailwind-merge";
@@ -68,23 +68,40 @@ export const Sidebar = () => {
               Dashboard
             </SidebarItem>
 
-            <PermissionGuard requireAdmin="users">
-              <SidebarItem
-                href="#"
+          <PermissionGuard requireAdmin="users">
+            <SidebarItemGroup>
+              <SidebarCollapse
                 icon={HiClipboardList}
-                onClick={(e) => handleNavigation(e, '/leads')}
-                active={isActive('/leads')}
+                label="Příležitosti"
+                renderChevronIcon={(theme, open) => {
+                  const IconComponent = open ? HiOutlineMinusSm : HiOutlinePlusSm;
+                  return <IconComponent aria-hidden className={twMerge(theme.label.icon.open[open ? "on" : "off"])} />;
+                }}
               >
-                Leads
-              </SidebarItem>
-            </PermissionGuard>
+                <SidebarItem
+                  href="#"
+                  onClick={(e) => handleNavigation(e, '/leads/table')}
+                  active={isActive('/leads/table')}
+                >
+                  V tabulce
+                </SidebarItem>
+                <SidebarItem
+                  href="#"
+                  onClick={(e) => handleNavigation(e, '/leads/kanban')}
+                  active={isActive('/leads/kanban')}
+                >
+                  Přehled
+                </SidebarItem>
+              </SidebarCollapse>
+            </SidebarItemGroup>
+          </PermissionGuard>
 
             <PermissionGuard requireAdmin="users">
               <SidebarItem
                 href="#"
                 icon={HiUsers}
-                onClick={(e) => handleNavigation(e, '/companies')}
-                active={isActive('/companies')}
+                onClick={(e) => handleNavigation(e, '/companies?is_active=true')}
+                active={isActive('/companies?is_active=true')}
               >
                 Firmy
               </SidebarItem>

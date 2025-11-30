@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api from '../../api/client';
 
 export const useKanban = (
@@ -6,16 +6,80 @@ export const useKanban = (
   columns,
   statusField,
   endpoints,
-  onDataChange
+  onDataChange,
+  fields = [] // ✅ Přidáno pro enrichment
 ) => {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Aktualizovat data když se změní initialData
+  // ✅ Enrichment funkce - načte related data pro async-select pole
+  const enrichData = useCallback(async (rawData) => {
+    if (!fields || fields.length === 0 || !rawData || rawData.length === 0) {
+      return rawData;
+    }
+
+    // Najdi všechna pole s enrich konfigurací
+    const enrichFields = fields.filter(f => f.enrich);
+
+    if (enrichFields.length === 0) {
+      return rawData;
+    }
+
+    // Pro každé enrich pole načti data
+    const enrichedData = [...rawData];
+
+    for (const field of enrichFields) {
+      const { endpoint, foreignKey, displayField } = field.enrich;
+
+      // Získej unikátní ID pro tento field
+      const ids = [...new Set(
+        rawData
+          .map(item => item[field.key])
+          .filter(id => id !== null && id !== undefined)
+      )];
+
+      if (ids.length === 0) continue;
+
+      try {
+        // Načti všechna related data najednou
+        const response = await api.get(endpoint);
+        const relatedData = response.data;
+
+        // Vytvoř lookup mapu
+        const lookupMap = {};
+        relatedData.forEach(item => {
+          lookupMap[item[foreignKey]] = item;
+        });
+
+        // Obohatit data
+        enrichedData.forEach(item => {
+          const relatedId = item[field.key];
+          if (relatedId && lookupMap[relatedId]) {
+            // Přidej enriched data pod klíč {field.key}_data
+            item[`${field.key}_data`] = lookupMap[relatedId];
+          }
+        });
+      } catch (err) {
+        console.warn(`Failed to enrich field ${field.key}:`, err);
+      }
+    }
+
+    return enrichedData;
+  }, [fields]);
+
+  // Aktualizovat data když se změní initialData + enrichment
   useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
+    const processData = async () => {
+      if (initialData && initialData.length > 0) {
+        const enriched = await enrichData(initialData);
+        setData(enriched);
+      } else {
+        setData(initialData || []);
+      }
+    };
+    processData();
+  }, [initialData, enrichData]);
 
   // Seskupit položky podle stavů (columnKey)
   const groupedData = columns.reduce((acc, column) => {

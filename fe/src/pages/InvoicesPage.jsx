@@ -185,7 +185,6 @@ export const InvoicesPage = () => {
         showInTable: true,
         showInForm: true,
         placeholder: 'Automaticky vygenerováno',
-        helpText: 'Ponechte prázdné pro automatické generování',
         formSection: 'basic',
       },
       {

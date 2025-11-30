@@ -2,18 +2,31 @@ import { Spinner } from 'flowbite-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   HiBan,
+  HiClock,
   HiCurrencyDollar,
   HiDocument,
   HiMail,
+  HiOfficeBuilding,
   HiPhone,
-  HiUser
+  HiUserCircle
 } from 'react-icons/hi';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { KanbanBoard } from '../components/Kanban/KanbanBoard';
 import { useToast } from '../contexts/ToastContext';
-// Definice klíčů filtrů - na jednom místě
-const FILTER_KEYS = ['is_active', 'source', 'company', 'user_id', 'min_value', 'max_value'];
+
+// Definice klíčů filtrů
+const FILTER_KEYS = [
+  'is_active',
+  'source',
+  'company_id',
+  'assigned_to',
+  'value_from',
+  'value_to',
+  'is_qualified',
+  'has_budget',
+  'title'
+];
 
 // Default filtry
 const DEFAULT_FILTERS = {
@@ -27,6 +40,7 @@ export const LeadsKanbanPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
+
   // Načti filtry z URL
   const currentFilters = useMemo(() => {
     const filters = {};
@@ -97,46 +111,36 @@ export const LeadsKanbanPage = () => {
       await api.patch(`/api/v1/leads/${lead.id}`, {
         is_active: false
       });
-      console.log('✅ Lead deactivated:', lead.id);
-      // Refresh dat
       showToast('success', 'Lead byl úspěšně zneplatněn');
       await fetchLeads();
     } catch (err) {
       console.error('Error deactivating lead:', err);
-      alert('Chyba při zneplatnění leadu');
-      showToast('error', 'Error při zneplatnění leadu');
+      showToast('error', 'Chyba při zneplatnění leadu');
     }
-  }, [fetchLeads]);
+  }, [fetchLeads, showToast]);
 
   // ✅ Duplikovat lead
   const handleDuplicate = useCallback(async (lead) => {
     try {
-      // 1. Načti aktuální data leadu z DB
       const response = await api.get(`/api/v1/leads/${lead.id}`);
       const originalLead = response.data;
 
-      // 2. Připrav data pro nový lead (odstraň ID a upravené timestamps)
-      const { id, created_at, updated_at, converted_at, ...leadData } = originalLead;
+      const { id, created_at, updated_at, converted_at, lost_at, ...leadData } = originalLead;
 
-      // 3. Přidej [DUPLICITA] k názvu
       const newLead = {
         ...leadData,
         title: `[KOPIE] ${leadData.title}`,
-        status: 'new', // Nový lead začíná vždy jako "new"
+        status: 'new',
       };
 
-      // 4. Vytvoř nový lead
       await api.post('/api/v1/leads', newLead);
-      console.log('✅ Lead duplicated:', lead.id);
       showToast('success', 'Lead byl úspěšně duplikován');
-      // 5. Refresh dat
       await fetchLeads();
     } catch (err) {
       console.error('Error duplicating lead:', err);
-      alert('Chyba při duplikování leadu');
-      showToast('error', 'Error při duplikování leadu');
+      showToast('error', 'Chyba při duplikování leadu');
     }
-  }, [fetchLeads]);
+  }, [fetchLeads, showToast]);
 
   // Načtení dat při změně URL (filtrů)
   useEffect(() => {
@@ -148,20 +152,84 @@ export const LeadsKanbanPage = () => {
     title: 'Sales Pipeline - Leads',
 
     columns: [
-      { key: 'new', label: 'Nové Leady', color: 'blue' },
-      { key: 'contacted', label: 'Kontaktováno', color: 'yellow' },
-      { key: 'proposal', label: 'Nabídka', color: 'pink' },
-      { key: 'won', label: 'Vyhráno', color: 'green' },
-      { key: 'lost', label: 'Ztraceno', color: 'red' },
+      { key: 'new', label: '🆕 Nové', color: 'blue' },
+      { key: 'contacted', label: '📞 Kontaktováno', color: 'yellow' },
+      { key: 'qualified', label: '✅ Kvalifikováno', color: 'purple' },
+      { key: 'proposal', label: '📋 Nabídka', color: 'pink' },
+      { key: 'negotiation', label: '🤝 Jednání', color: 'blue' },
+      { key: 'won', label: '💰 Vyhráno', color: 'green' },
+      { key: 'lost', label: '❌ Ztraceno', color: 'red' },
     ],
 
+    // ✅ FormSections - stejné jako v LeadsPage
+    formSections: [
+      {
+        key: 'basic',
+        label: 'Základní údaje',
+        icon: '🎯',
+        columns: 3,
+        defaultOpen: true,
+      },
+      {
+        key: 'company',
+        label: 'Společnost',
+        icon: '🏢',
+        columns: 2,
+        defaultOpen: true,
+      },
+      {
+        key: 'value',
+        label: 'Hodnota a pravděpodobnost',
+        icon: '💰',
+        columns: 3,
+        defaultOpen: true,
+      },
+      {
+        key: 'source',
+        label: 'Zdroj leadu',
+        icon: '📍',
+        columns: 3,
+        defaultOpen: false,
+      },
+      {
+        key: 'timeline',
+        label: 'Časová osa',
+        icon: '📅',
+        columns: 2,
+        defaultOpen: false,
+      },
+      {
+        key: 'qualification',
+        label: 'BANT Kvalifikace',
+        icon: '✅',
+        columns: 2,
+        defaultOpen: false,
+      },
+      {
+        key: 'notes',
+        label: 'Poznámky',
+        icon: '📝',
+        columns: 1,
+        defaultOpen: false,
+      },
+    ],
+
+    // ✅ FormModal konfigurace
+    formModal: {
+      size: '4xl',
+    },
+
     fields: [
+      // =====================================================
+      // ZÁKLADNÍ ÚDAJE
+      // =====================================================
       {
         key: 'id',
         label: 'Lead ID',
         type: 'number',
         editable: false,
         showInCard: false,
+        showInForm: false,
       },
       {
         key: 'title',
@@ -170,127 +238,383 @@ export const LeadsKanbanPage = () => {
         required: true,
         editable: true,
         showInCard: true,
-        placeholder: 'např. Nový projekt',
+        showInForm: true,
+        placeholder: 'např. Nový web pro e-shop',
+        formSection: 'basic', // ✅
+      },
+            {
+        key: 'assigned_to',
+        label: 'Přiřazeno',
+        type: 'async-select',
+        sortable: true,
+        editable: true,
+        showInCard: true, // ✅ Zobrazit v kartě
+        showInForm: true,
+        endpoint: '/api/v1/users',
+        optionValue: 'id',
+        optionLabel: 'client_id',
+        queryParamKey: 'client_id',
+        placeholder: 'Přiřadit kolegovi...',
+        formSection: 'basic', // ✅
+        enrich: {
+          endpoint: '/api/v1/users',
+          foreignKey: 'id',
+          displayField: 'client_id',
+          showAsBadge: true,
+        },
       },
       {
         key: 'description',
         label: 'Popis',
         type: 'textarea',
-        required: false,
         editable: true,
-        showInCard: true,
-        placeholder: 'Popis leadu...',
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'Detailní popis příležitosti...',
+        formSection: 'basic', // ✅
       },
       {
-        key: 'company',
-        label: 'Firma',
-        type: 'text',
-        required: false,
+        key: 'status',
+        label: 'Status',
+        type: 'select',
+        required: true,
+        editable: false,
+        showInCard: false,
+        showInForm: true,
+        options: [
+          { value: 'new', label: '🆕 Nový' },
+          { value: 'contacted', label: '📞 Kontaktován' },
+          { value: 'qualified', label: '✅ Kvalifikován' },
+          { value: 'proposal', label: '📋 Nabídka' },
+          { value: 'negotiation', label: '🤝 Jednání' },
+          { value: 'won', label: '💰 Vyhrán' },
+          { value: 'lost', label: '❌ Ztracen' },
+        ],
+        defaultValue: 'new',
+        formSection: 'basic', // ✅
+      },
+
+      // =====================================================
+      // ASSIGNED TO - zobrazit v kartě!
+      // =====================================================
+
+
+      // =====================================================
+      // VALUE - zobrazit v kartě!
+      // =====================================================
+      {
+        key: 'value',
+        label: 'Hodnota',
+        type: 'currency',
         editable: true,
         showInCard: true,
-        placeholder: 'např. ACME Corp.',
+        showInForm: true,
+        placeholder: '50000',
+        helpText: 'Odhadovaná hodnota obchodu',
+        formSection: 'value', // ✅
+        formatValue: (value) => {
+          if (!value || value === 0) return '—';
+          return `${value.toLocaleString('cs-CZ')} Kč`;
+        },
       },
+
+      // =====================================================
+      // FIRMA
+      // =====================================================
       {
-        key: 'user_id',
-        label: 'Uživatel',
-        type: 'ajax',
-        sortable: true,
-        required: false,
+        key: 'company_id',
+        label: 'Firma (z databáze)',
+        type: 'async-select',
         editable: true,
-        endpoint: '/api/v1/users',
+        showInCard: false,
+        showInForm: true,
+        endpoint: '/api/v1/companies',
         optionValue: 'id',
-        optionLabel: 'client_id',
-        queryParamKey: 'client_id',
-        showInTable: true,
+        optionLabel: 'name',
+        queryParamKey: 'name',
+        placeholder: 'Vyberte firmu...',
+        formSection: 'company', // ✅
         enrich: {
-          endpoint: '/api/v1/users',
+          endpoint: '/api/v1/companies',
           foreignKey: 'id',
-          displayField: 'client_id',
+          displayField: 'name',
           showAsBadge: false,
         },
-    },
+        fillFields: {
+          company_name: 'name',
+          email: 'email',
+          phone: 'phone',
+        },
+      },
+      {
+        key: 'company_name',
+        label: 'Název firmy',
+        type: 'text',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'ACME s.r.o.',
+        formSection: 'company', // ✅
+      },
+
+      // =====================================================
+      // KONTAKT
+      // =====================================================
+      {
+        key: 'contact_person',
+        label: 'Kontaktní osoba',
+        type: 'text',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'Jan Novák',
+        formSection: 'company', // ✅
+      },
       {
         key: 'email',
         label: 'Email',
         type: 'email',
-        required: false,
         editable: true,
-        showInCard: true,
-        placeholder: 'jan.novak@acme.cz',
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'jan.novak@firma.cz',
+        formSection: 'company', // ✅
       },
       {
         key: 'phone',
         label: 'Telefon',
         type: 'text',
-        required: false,
-        editable: true,
-        showInCard: true,
-        placeholder: '+420 123 456 789',
-      },
-      {
-        key: 'status',
-        label: 'Fáze',
-        type: 'select',
-        required: true,
         editable: true,
         showInCard: false,
+        showInForm: true,
+        placeholder: '+420 123 456 789',
+        formSection: 'company', // ✅
+      },
+
+      // =====================================================
+      // HODNOTA A PRAVDĚPODOBNOST
+      // =====================================================
+      {
+        key: 'currency',
+        label: 'Měna',
+        type: 'select',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
         options: [
-          { value: 'new', label: 'Nové' },
-          { value: 'contacted', label: 'Kontaktováno' },
-          { value: 'proposal', label: 'Nabídka' },
-          { value: 'won', label: 'Vyhráno' },
-          { value: 'lost', label: 'Ztraceno' },
+          { value: 'CZK', label: 'CZK' },
+          { value: 'EUR', label: 'EUR' },
+          { value: 'USD', label: 'USD' },
         ],
-        defaultValue: 'new',
+        defaultValue: 'CZK',
+        formSection: 'value', // ✅
       },
       {
-        key: 'value',
-        label: 'Hodnota',
-        type: 'currency',
-        required: false,
+        key: 'probability',
+        label: 'Pravděpodobnost (%)',
+        type: 'number',
         editable: true,
-        showInCard: true,
-        placeholder: '50000',
-        helpText: 'Odhadovaná hodnota obchodu v Kč',
-        formatValue: (value) => value ? `${value.toLocaleString('cs-CZ')} Kč` : '0 Kč',
+        showInCard: false,
+        showInForm: true,
+        placeholder: '0-100',
+        formSection: 'value', // ✅
       },
+
+      // =====================================================
+      // ZDROJ
+      // =====================================================
       {
         key: 'source',
-        label: 'Zdroj leadu',
+        label: 'Zdroj',
         type: 'select',
-        required: false,
         editable: true,
-        showInCard: true,
+        showInCard: false,
+        showInForm: true,
         options: [
           { value: 'website', label: '🌐 Web' },
+          { value: 'phone', label: '📞 Telefon' },
+          { value: 'email', label: '📧 Email' },
           { value: 'referral', label: '👥 Doporučení' },
-          { value: 'linkedin', label: '💼 LinkedIn' },
-          { value: 'cold_call', label: '📞 Cold Call' },
+          { value: 'social', label: '📱 Sociální sítě' },
+          { value: 'advertising', label: '📢 Reklama' },
           { value: 'event', label: '🎪 Událost' },
+          { value: 'partner', label: '🤝 Partner' },
           { value: 'other', label: '📋 Jiné' },
         ],
+        defaultValue: 'other',
+        formSection: 'source', // ✅
       },
+      {
+        key: 'source_details',
+        label: 'Detaily zdroje',
+        type: 'text',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'např. Google Ads - Kampaň ABC',
+        formSection: 'source', // ✅
+      },
+      {
+        key: 'campaign',
+        label: 'Kampaň',
+        type: 'text',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'Název kampaně',
+        formSection: 'source', // ✅
+      },
+
+      // =====================================================
+      // ČASOVÁ OSA
+      // =====================================================
+      {
+        key: 'expected_close_date',
+        label: 'Očekávané uzavření',
+        type: 'date',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'timeline', // ✅
+      },
+      {
+        key: 'next_action_date',
+        label: 'Datum další akce',
+        type: 'date',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'timeline', // ✅
+      },
+      {
+        key: 'next_action',
+        label: 'Další akce',
+        type: 'text',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'Co udělat příště',
+        formSection: 'timeline', // ✅
+      },
+
+      // =====================================================
+      // KVALIFIKACE
+      // =====================================================
+      {
+        key: 'is_qualified',
+        label: 'Kvalifikován',
+        type: 'boolean',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'qualification', // ✅
+      },
+      {
+        key: 'qualification_score',
+        label: 'Skóre kvalifikace',
+        type: 'number',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'qualification', // ✅
+      },
+      {
+        key: 'has_budget',
+        label: '💰 Má rozpočet',
+        type: 'boolean',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'qualification', // ✅
+      },
+      {
+        key: 'has_authority',
+        label: '👔 Má rozhodovací pravomoc',
+        type: 'boolean',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'qualification', // ✅
+      },
+      {
+        key: 'has_need',
+        label: '🎯 Má potřebu',
+        type: 'boolean',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'qualification', // ✅
+      },
+      {
+        key: 'has_timeline',
+        label: '📅 Má časový plán',
+        type: 'boolean',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'qualification', // ✅
+      },
+
+      // =====================================================
+      // ZTRÁTA
+      // =====================================================
+      {
+        key: 'lost_reason',
+        label: 'Důvod ztráty',
+        type: 'text',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'Proč byl lead ztracen',
+        formSection: 'notes', // ✅
+      },
+
+      // =====================================================
+      // POZNÁMKY
+      // =====================================================
+      {
+        key: 'notes',
+        label: 'Poznámky',
+        type: 'textarea',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        placeholder: 'Poznámky k leadu...',
+        formSection: 'notes', // ✅
+      },
+      {
+        key: 'tags',
+        label: 'Štítky',
+        type: 'tags',
+        editable: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'notes', // ✅
+      },
+
+      // =====================================================
+      // STAV
+      // =====================================================
       {
         key: 'is_active',
         label: 'Aktivní',
         type: 'boolean',
-        required: false,
         editable: true,
-        showInCard: true,
+        showInCard: false,
+        showInForm: true,
+        formSection: 'basic', // ✅
       },
+
+      // =====================================================
+      // AUDIT
+      // =====================================================
       {
         key: 'created_at',
         label: 'Vytvořeno',
         type: 'datetime',
         editable: false,
         showInCard: false,
-      },
-      {
-        key: 'updated_at',
-        label: 'Aktualizováno',
-        type: 'datetime',
-        editable: false,
-        showInCard: false,
+        showInForm: false,
       },
       {
         key: 'converted_at',
@@ -298,22 +622,80 @@ export const LeadsKanbanPage = () => {
         type: 'datetime',
         editable: false,
         showInCard: false,
+        showInForm: false,
       },
     ],
 
     filters: [
-      { key: 'is_active', label: 'Aktivní', type: 'boolean' },
-      { key: 'company', label: 'Firma', type: 'text', placeholder: 'Hledat podle firmy...' },
       {
-        key: 'user_id',
-        label: 'Vlastník',
+        key: 'is_active',
+        label: 'Aktivní',
+        type: 'boolean'
+      },
+      {
+        key: 'company_id',
+        label: 'Firma',
+        type: 'async-select',
+        endpoint: '/api/v1/companies',
+        valueKey: 'id',
+        labelKey: 'name',
+        queryParamKey: 'name',
+        placeholder: 'Hledat firmu...',
+        minChars: 2,
+      },
+      {
+        key: 'assigned_to',
+        label: 'Přiřazeno',
         type: 'async-select',
         endpoint: '/api/v1/users',
         valueKey: 'id',
         labelKey: 'client_id',
-        queryParamKey: 'client_id',           // Nebo 'name', podle tvého API
-        placeholder: 'Začněte psát jméno klienta...',
+        queryParamKey: 'client_id',
+        placeholder: 'Filtrovat podle přiřazení...',
         minChars: 2,
+      },
+      {
+        key: 'source',
+        label: 'Zdroj',
+        type: 'select',
+        options: [
+          { value: 'website', label: 'Web' },
+          { value: 'phone', label: 'Telefon' },
+          { value: 'email', label: 'Email' },
+          { value: 'referral', label: 'Doporučení' },
+          { value: 'social', label: 'Sociální sítě' },
+          { value: 'advertising', label: 'Reklama' },
+          { value: 'event', label: 'Událost' },
+          { value: 'partner', label: 'Partner' },
+        ],
+      },
+      {
+        key: 'value_from',
+        label: 'Hodnota od',
+        type: 'number',
+        placeholder: 'Min. hodnota',
+      },
+      {
+        key: 'value_to',
+        label: 'Hodnota do',
+        type: 'number',
+        placeholder: 'Max. hodnota',
+      },
+      {
+        key: 'is_qualified',
+        label: 'Kvalifikován',
+        type: 'boolean',
+      },
+      {
+        key: 'has_budget',
+        label: 'Má rozpočet',
+        type: 'boolean',
+      },
+      {
+        key: 'title',
+        label: 'Název',
+        type: 'text',
+        placeholder: 'Hledat v názvu...',
       },
     ],
 
@@ -322,29 +704,59 @@ export const LeadsKanbanPage = () => {
     onApplyFilters: applyFilters,
 
     cardConfig: {
-      displayFields: ['title', 'company', 'client_id', 'email', 'phone', 'value', 'source'],
+      // ⭐ Pole zobrazená v kartě: title, assigned_to, value
+      displayFields: ['title', 'assigned_to', 'value'],
+      
+      // Barva karty podle hodnoty
       cardColor: (item) => {
-        if (!item.value) return 'gray';
+        if (!item.value || item.value === 0) return 'gray';
         if (item.value >= 100000) return 'green';
         if (item.value >= 50000) return 'blue';
         return 'yellow';
       },
+      
+      // Ikona podle statusu
       cardIcon: (item) => {
-        switch (item.source) {
-          case 'website': return HiMail;
-          case 'referral': return HiUser;
-          case 'linkedin': return HiUser;
-          case 'cold_call': return HiPhone;
+        switch (item.status) {
+          case 'new': return HiCurrencyDollar;
+          case 'contacted': return HiPhone;
+          case 'qualified': return HiUserCircle;
+          case 'proposal': return HiDocument;
+          case 'negotiation': return HiOfficeBuilding;
+          case 'won': return HiCurrencyDollar;
+          case 'lost': return HiBan;
           default: return HiCurrencyDollar;
         }
       },
+      
+      // Avatar - zobrazit inicály assigned_to
       showAvatar: true,
       avatarInitials: (item) => {
-        if (!item.client_id) return null;
-        return item.client_id.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        // Pokud máme enriched data
+        if (item.assigned_to_data?.client_id) {
+          const name = item.assigned_to_data.client_id;
+          return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        }
+        // Fallback na ID
+        if (item.assigned_to) {
+          return String(item.assigned_to).substring(0, 2).toUpperCase();
+        }
+        return '?';
       },
-      avatarLabel: (item) => item.client_id,
+      avatarLabel: (item) => {
+        if (item.assigned_to_data?.client_id) {
+          return item.assigned_to_data.client_id;
+        }
+        return item.assigned_to || 'Nepřiřazeno';
+      },
+      
+      // Badges
       cardBadges: [
+        {
+          field: 'is_qualified',
+          getColor: (value) => value ? 'success' : 'gray',
+          formatValue: (value) => value ? '✅ Kvalifikováno' : '',
+        },
         {
           field: 'is_active',
           getColor: (value) => value ? 'success' : 'failure',
@@ -355,13 +767,13 @@ export const LeadsKanbanPage = () => {
 
     data: leads,
 
-    // ✅ Context akce pro pravý panel
+    // ✅ Context akce
     contextActions: [
       {
         label: 'Zneplatnit',
         icon: HiBan,
         onClick: handleDeactivate,
-        color: 'red', // volitelné - pro styling
+        color: 'red',
       },
       {
         label: 'Duplikovat',
@@ -376,12 +788,14 @@ export const LeadsKanbanPage = () => {
       delete: '/api/v1/leads',
       updateStatus: '/api/v1/leads',
     },
+    
     actions: {
       create: true,
       edit: true,
       delete: true,
       export: true,
     },
+    
     statusField: 'status',
     onDataChange: fetchLeads,
   }), [leads, currentFilters, applyFilters, fetchLeads, handleDeactivate, handleDuplicate]);

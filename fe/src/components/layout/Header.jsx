@@ -7,8 +7,8 @@ export const Header = () => {
       className="bg-gray-50 dark:bg-gray-800 border-b border-gray-50 dark:border-gray-700"
     >
       <NavbarBrand href="/">
-
-        <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">Pomocníček</span>
+         <img src="/kerberos_logo.png" className="mr-3 h-12 sm:h-12" alt="Kerberos CRM logo" />
+        <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">KERBEROS</span>
       </NavbarBrand>
     </Navbar>
   );
