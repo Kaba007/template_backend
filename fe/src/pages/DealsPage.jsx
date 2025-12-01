@@ -2,6 +2,7 @@
 import { Button, Modal, Spinner, TextInput, Label } from 'flowbite-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 import {
   HiOutlineCheck,
   HiOutlineDocumentText,
@@ -24,6 +25,7 @@ export const DealsPage = () => {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [selectedDeal, setSelectedDeal] = useState(null);
+  const { showToast } = useToast();
 
   // Fetch data z API
   const fetchDeals = useCallback(async () => {
@@ -323,6 +325,21 @@ export const DealsPage = () => {
         placeholder: 'např. Web pro ACME s.r.o.',
         formSection: 'basic',
       },
+       {
+        key: 'user_id',
+        label: 'Přiřazeno',
+        type: 'async-select',
+        sortable: true,
+        editable: true,
+        showInTable: false,
+        showInForm: true,
+        endpoint: '/api/v1/users',
+        optionValue: 'id',
+        optionLabel: 'client_id',
+        queryParamKey: 'client_id',
+        placeholder: 'Přiřadit kolegovi...',
+        formSection: 'basic',
+      },
       {
         key: 'description',
         label: 'Popis',
@@ -373,22 +390,6 @@ export const DealsPage = () => {
           displayField: 'title',
         },
       },
-      {
-        key: 'assigned_to',
-        label: 'Přiřazeno',
-        type: 'async-select',
-        sortable: true,
-        editable: true,
-        showInTable: false,
-        showInForm: true,
-        endpoint: '/api/v1/users',
-        optionValue: 'id',
-        optionLabel: 'client_id',
-        queryParamKey: 'client_id',
-        placeholder: 'Přiřadit kolegovi...',
-        formSection: 'basic',
-      },
-
       // =====================================================
       // ZÁKAZNÍK
       // =====================================================
