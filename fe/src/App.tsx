@@ -13,6 +13,8 @@ import { LoginPage } from './pages/LoginPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { UsersPage } from './pages/UsersPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { DealsPage } from './pages/DealsPage';
 function App() {
   return (
     <BrowserRouter>
@@ -61,6 +63,26 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/deals"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <DealsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+            <Route
+            path="/products"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <ProductsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           {/* Tasks stránka */}
           <Route
@@ -91,6 +113,7 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
           <Route
             path="/leads/table"
             element={

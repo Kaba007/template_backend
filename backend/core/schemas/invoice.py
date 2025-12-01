@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 from .utils import VatMode, PaymentMethod
 
+
 # =====================================================
 # ENUMS
 # =====================================================
@@ -130,6 +131,9 @@ class InvoiceBase(BaseModel):
     order_number: Optional[str] = None
     contract_number: Optional[str] = None
     proforma_id: Optional[int] = None
+    
+    # Vazba na Deal (NOVÉ!)
+    deal_id: Optional[int] = Field(None, description="ID objednávky/dealu")
 
     # Datumy
     tax_date: Optional[date] = None
@@ -195,6 +199,7 @@ class InvoiceUpdate(BaseModel):
     order_number: Optional[str] = None
     contract_number: Optional[str] = None
     proforma_id: Optional[int] = None
+    deal_id: Optional[int] = None  # NOVÉ!
     supplier_id: Optional[int] = None
     customer_id: Optional[int] = None
     issue_date: Optional[date] = None
@@ -281,6 +286,10 @@ class InvoicePublic(InvoiceBase):
     qr_payment_code: Optional[str] = None
     pdf_url: Optional[str] = None
 
+    # Deal data (NOVÉ!)
+    deal_id: Optional[int] = None
+    deal_data: Optional[Dict[str, Any]] = None  # Obohacená data z Deal (deal_number, title, status...)
+
     created_by: Optional[str] = None
     is_active: bool = True
     created_at: datetime
@@ -304,5 +313,124 @@ class InvoiceListItem(BaseModel):
     status: InvoiceStatus
     created_at: datetime
     
+    # Deal info (NOVÉ!)
+    deal_id: Optional[int] = None
+    deal_number: Optional[str] = None
+    
     class Config:
         from_attributes = True
+
+
+# =====================================================
+# INVOICE FROM DEAL
+# =====================================================
+class InvoiceFromDealCreate(BaseModel):
+    """
+    Schema pro vytvoření faktury z dealu.
+    
+    Položky se automaticky zkopírují z dealu.
+    
+    Minimální požadavky:
+    - deal_id
+    - supplier_id  
+    - issue_date
+    - due_date
+    """
+    deal_id: int = Field(..., description="ID dealu")
+    supplier_id: int = Field(..., description="ID dodavatele (vaše firma)")
+    issue_date: date = Field(..., description="Datum vystavení")
+    due_date: date = Field(..., description="Datum splatnosti")
+    
+    # Optional - typ faktury
+    invoice_type: Optional[InvoiceType] = Field(InvoiceType.INVOICE, description="Typ faktury")
+    
+    # Optional - přepsat hodnoty z dealu
+    tax_date: Optional[date] = None
+    variable_symbol: Optional[str] = None
+    order_number: Optional[str] = None  # Default: deal_number
+    
+    # Optional - texty
+    header_text: Optional[str] = None
+    footer_text: Optional[str] = None
+    notes: Optional[str] = None  # Default: z dealu
+    payment_instructions: Optional[str] = None
+    
+    # Optional - režim DPH
+    vat_mode: Optional[VatMode] = None
+    
+    # Optional - měna (default: z dealu)
+    currency: Optional[str] = None
+
+
+class InvoiceFromDealResponse(BaseModel):
+    """Response po vytvoření faktury z dealu"""
+    invoice_id: int
+    invoice_number: str
+    deal_id: int
+    deal_number: str
+    total: float
+    currency: str
+    message: str = "Faktura úspěšně vytvořena z dealu"
+
+
+# =====================================================
+# INVOICE STATS
+# =====================================================
+class InvoiceStats(BaseModel):
+    """Statistiky faktur"""
+    total_count: int
+    by_status: Dict[str, int]
+    by_type: Dict[str, int]
+    total_amount: float
+    paid_amount: float
+    unpaid_amount: float
+    overdue_count: int
+    overdue_amount: float
+
+
+# =====================================================
+# HELPER - Příklady použití
+# =====================================================
+"""
+MINIMÁLNÍ VYTVOŘENÍ FAKTURY:
+
+{
+    "supplier_id": 1,
+    "customer_id": 5,
+    "issue_date": "2025-01-15",
+    "due_date": "2025-01-29"
+}
+
+FAKTURA S POLOŽKAMI:
+
+{
+    "supplier_id": 1,
+    "customer_id": 5,
+    "issue_date": "2025-01-15",
+    "due_date": "2025-01-29",
+    "items": [
+        {"name": "Webová stránka", "quantity": 1, "unit_price": 25000, "vat_rate": 21},
+        {"name": "Hosting", "quantity": 12, "unit": "měsíc", "unit_price": 199, "vat_rate": 21}
+    ]
+}
+
+FAKTURA Z DEALU:
+
+{
+    "deal_id": 42,
+    "supplier_id": 1,
+    "issue_date": "2025-01-15",
+    "due_date": "2025-01-29"
+}
+
+PROFORMA Z DEALU:
+
+{
+    "deal_id": 42,
+    "supplier_id": 1,
+    "issue_date": "2025-01-10",
+    "due_date": "2025-01-17",
+    "invoice_type": "proforma",
+    "notes": "Zálohová faktura - 50% celkové ceny"
+}
+"""

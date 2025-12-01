@@ -8,7 +8,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from backend.core.db import Base
-from .utils import  PaymentMethod, VatMode
+from .utils import PaymentMethod, VatMode
+
 
 # =====================================================
 # ENUMS
@@ -30,10 +31,7 @@ class InvoiceStatus(str, PyEnum):
     PAID = "paid"                    # Zaplaceno
     PARTIALLY_PAID = "partially_paid"  # Částečně zaplaceno
     OVERDUE = "overdue"              # Po splatnosti
-    CANCELLED = "cancelled"          # Stornováno and 
-
-
-
+    CANCELLED = "cancelled"          # Stornováno
 
 
 # =====================================================
@@ -58,6 +56,12 @@ class Invoice(Base):
 
     # Reference na proforma (pokud je to faktura z proformy)
     proforma_id = Column(Integer, ForeignKey("invoices.id", ondelete="SET NULL"), nullable=True)
+
+    # =====================================================
+    # VAZBA NA DEAL (NOVÉ!)
+    # =====================================================
+    # Jeden deal může mít více faktur (záloha, částečná fakturace, dobropis...)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # =====================================================
     # DODAVATEL (Supplier)
@@ -200,6 +204,7 @@ class Invoice(Base):
         Index('idx_invoice_supplier_customer', 'supplier_id', 'customer_id'),
         Index('idx_invoice_dates', 'issue_date', 'due_date'),
         Index('idx_invoice_status_due', 'status', 'due_date'),
+        Index('idx_invoice_deal', 'deal_id'),  # NOVÝ INDEX
     )
 
     # =====================================================
@@ -209,6 +214,9 @@ class Invoice(Base):
     customer = relationship("Company", back_populates="invoices_as_customer", foreign_keys=[customer_id])
     creator = relationship("User", backref="created_invoices", foreign_keys=[created_by])
     proforma = relationship("Invoice", remote_side=[id], foreign_keys=[proforma_id])
+    
+    # Vazba na Deal (NOVÉ!)
+    deal = relationship("Deal", back_populates="invoices", foreign_keys=[deal_id])
 
     def __repr__(self):
         return f"<Invoice(id={self.id}, number='{self.invoice_number}', type={self.invoice_type}, status={self.status})>"
@@ -277,6 +285,92 @@ class Invoice(Base):
         self.vat_breakdown = {k: {'base': round(v['base'], 2), 'vat': round(v['vat'], 2)} for k, v in vat_breakdown.items()}
         self.total_vat = round(sum(v['vat'] for v in vat_breakdown.values()), 2)
         self.total = round(self.subtotal_after_discount + self.total_vat + (self.rounding or 0), 2)
+
+    # =====================================================
+    # NOVÉ METODY PRO PRÁCI S DEAL
+    # =====================================================
+    @classmethod
+    def create_from_deal(cls, deal: "Deal", supplier: "Company", invoice_type: InvoiceType = InvoiceType.INVOICE, **kwargs) -> "Invoice":
+        """
+        Vytvoří fakturu z dealu.
+        
+        Args:
+            deal: Deal objekt
+            supplier: Company objekt (dodavatel/vaše firma)
+            invoice_type: Typ faktury (invoice, proforma, ...)
+            **kwargs: Dodatečné parametry (issue_date, due_date, ...)
+        
+        Returns:
+            Invoice instance (neuložená)
+        """
+        # Získání zákazníka z dealu
+        customer = deal.company
+        
+        # Připrav základní data
+        invoice_data = {
+            'deal_id': deal.id,
+            'invoice_type': invoice_type,
+            
+            # Dodavatel
+            'supplier_id': supplier.id,
+            'supplier_name': supplier.name,
+            'supplier_legal_name': getattr(supplier, 'legal_name', None),
+            'supplier_ico': getattr(supplier, 'ico', None),
+            'supplier_dic': getattr(supplier, 'dic', None),
+            'supplier_vat_id': getattr(supplier, 'vat_id', None),
+            'supplier_is_vat_payer': getattr(supplier, 'is_vat_payer', False),
+            'supplier_address_street': getattr(supplier, 'address_street', None),
+            'supplier_address_city': getattr(supplier, 'address_city', None),
+            'supplier_address_zip': getattr(supplier, 'address_zip', None),
+            'supplier_address_country': getattr(supplier, 'address_country', None),
+            'supplier_email': getattr(supplier, 'email', None),
+            'supplier_phone': getattr(supplier, 'phone', None),
+            'supplier_bank_name': getattr(supplier, 'bank_name', None),
+            'supplier_bank_account': getattr(supplier, 'bank_account', None),
+            'supplier_bank_iban': getattr(supplier, 'bank_iban', None),
+            'supplier_bank_swift': getattr(supplier, 'bank_swift', None),
+            
+            # Odběratel
+            'customer_id': customer.id if customer else None,
+            'customer_name': customer.name if customer else deal.company_name,
+            'customer_legal_name': getattr(customer, 'legal_name', None) if customer else None,
+            'customer_ico': getattr(customer, 'ico', None) if customer else None,
+            'customer_dic': getattr(customer, 'dic', None) if customer else None,
+            'customer_vat_id': getattr(customer, 'vat_id', None) if customer else None,
+            'customer_address_street': getattr(customer, 'address_street', None) if customer else None,
+            'customer_address_city': getattr(customer, 'address_city', None) if customer else None,
+            'customer_address_zip': getattr(customer, 'address_zip', None) if customer else None,
+            'customer_address_country': getattr(customer, 'address_country', None) if customer else None,
+            'customer_email': deal.email or (getattr(customer, 'email', None) if customer else None),
+            'customer_phone': deal.phone or (getattr(customer, 'phone', None) if customer else None),
+            
+            # Měna
+            'currency': deal.currency,
+            
+            # Položky z dealu
+            'items': deal.create_invoice_items(),
+            
+            # Číslo objednávky
+            'order_number': deal.deal_number,
+        }
+        
+        # Poznámky - pouze pokud nejsou v kwargs
+        if 'notes' not in kwargs and deal.notes:
+            invoice_data['notes'] = deal.notes
+        
+        # Přidej kwargs (přepíšou výchozí hodnoty)
+        invoice_data.update(kwargs)
+        
+        invoice = cls(**invoice_data)
+        invoice.recalculate_totals()
+        return invoice
+        def sync_payment_to_deal(self):
+            """
+            Synchronizuje stav platby zpět do dealu.
+            Volat po změně paid_amount nebo status.
+            """
+            if self.deal:
+                self.deal.recalculate_payment_status()
 
 
 # =====================================================

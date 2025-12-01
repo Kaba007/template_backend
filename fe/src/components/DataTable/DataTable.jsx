@@ -349,6 +349,7 @@ export const DataTable = ({ config }) => {
           mode={formModal.mode}
           columns={columns}
           formSections={formSections}
+          formModalConfig={config.formModal} 
           onClose={() => setFormModal({ open: false, item: null, mode: 'create' })}
           onSubmit={handleFormSubmit}
           endpoints={endpoints}

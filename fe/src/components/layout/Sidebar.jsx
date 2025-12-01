@@ -95,6 +95,33 @@ export const Sidebar = () => {
               </SidebarCollapse>
             </SidebarItemGroup>
           </PermissionGuard>
+          <PermissionGuard requireAdmin="users">
+            <SidebarItemGroup>
+              <SidebarCollapse
+                icon={HiClipboardList}
+                label="Příležitosti"
+                renderChevronIcon={(theme, open) => {
+                  const IconComponent = open ? HiOutlineMinusSm : HiOutlinePlusSm;
+                  return <IconComponent aria-hidden className={twMerge(theme.label.icon.open[open ? "on" : "off"])} />;
+                }}
+              >
+                <SidebarItem
+                  href="#"
+                  onClick={(e) => handleNavigation(e, '/products')}
+                  active={isActive('/products')}
+                >
+                 Produkty
+                </SidebarItem>
+                <SidebarItem
+                  href="#"
+                  onClick={(e) => handleNavigation(e, '/deals')}
+                  active={isActive('/deals')}
+                >
+                  Objednávky
+                </SidebarItem>
+              </SidebarCollapse>
+            </SidebarItemGroup>
+          </PermissionGuard>
 
             <PermissionGuard requireAdmin="users">
               <SidebarItem
