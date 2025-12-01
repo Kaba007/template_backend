@@ -11,6 +11,8 @@ export const FormModal = ({
   mode,
   columns,
   formSections,
+  modalSettings,
+  formModalConfig = {},
   onClose,
   onSubmit,
   endpoints,
@@ -98,9 +100,9 @@ export const FormModal = ({
       setLoading(false);
     }
   };
-
+const modalSize = formModalConfig.size || '6xl';
   return (
-    <Modal show={open} size="6xl" onClose={onClose}>
+    <Modal show={open} size={modalSize}  onClose={onClose}>
       <ModalHeader>{title}</ModalHeader>
       <ModalBody>
         <DynamicForm

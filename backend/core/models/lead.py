@@ -104,7 +104,12 @@ class Lead(Base):
     # KONVERZE
     # =====================================================
     converted_at = Column(DateTime, nullable=True)  # Kdy byl konvertován
-    converted_to_deal_id = Column(Integer, nullable=True)  # ID dealu (pokud máte Deal model)
+    converted_to_deal_id = Column(
+        Integer, 
+        ForeignKey("deals.id", ondelete="SET NULL"), 
+        nullable=True, 
+        index=True
+    )
     
     # =====================================================
     # ZTRÁTA
@@ -145,7 +150,11 @@ class Lead(Base):
     company = relationship("Company", backref="leads", foreign_keys=[company_id])  # Optional!
     creator = relationship("User", foreign_keys=[created_by])
     assignee = relationship("User", foreign_keys=[assigned_to])
-
+    converted_deal = relationship(
+        "Deal", 
+        foreign_keys=[converted_to_deal_id],
+        backref="source_lead"
+    )
     def __repr__(self):
         return f"<Lead(id={self.id}, title='{self.title}', status={self.status})>"
 
@@ -192,3 +201,40 @@ class Lead(Base):
         if self.has_need: score += 1
         if self.has_timeline: score += 1
         return score
+    
+    def convert_to_deal(self, deal_title: str = None) -> dict:
+        """
+        Připraví data pro vytvoření Dealu z tohoto leadu.
+        
+        Args:
+            deal_title: Volitelný název dealu (default: název leadu)
+            
+        Returns:
+            Dict s daty pro DealCreate schema
+        """
+        return {
+            "title": deal_title or self.title,
+            "user_id": self.user_id,
+            "lead_id": self.id,
+            "company_id": self.company_id,
+            "company_name": self.company_name,
+            "contact_person": self.contact_person,
+            "email": self.email,
+            "phone": self.phone,
+            "notes": self.notes,
+            "tags": self.tags or [],
+            "custom_fields": self.custom_fields or {},
+            "assigned_to": self.assigned_to,
+        }
+
+    def mark_as_converted(self, deal_id: int):
+        """
+        Označí lead jako konvertovaný.
+        
+        Args:
+            deal_id: ID vytvořeného dealu
+        """
+        from datetime import datetime
+        self.converted_to_deal_id = deal_id
+        self.converted_at = datetime.utcnow()
+        self.status = LeadStatus.WON

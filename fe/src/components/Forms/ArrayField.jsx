@@ -1,6 +1,7 @@
 import { Button, Label, TextInput } from 'flowbite-react';
 import { useCallback, useMemo } from 'react';
 import { HiPlus, HiTrash } from 'react-icons/hi';
+import { AsyncSelectFilter } from '../filters/AjaxSelect';
 
 /**
  * ArrayField - Komponenta pro pole s více položkami (např. položky faktury)
@@ -9,6 +10,7 @@ import { HiPlus, HiTrash } from 'react-icons/hi';
  * - Přidávání/mazání řádků
  * - Computed fields na úrovni položky
  * - Validaci jednotlivých položek
+ * - Async-select pro výběr položek z katalogu (např. produktů)
  */
 export const ArrayField = ({
   column,
@@ -93,6 +95,62 @@ export const ArrayField = ({
 
     // Formátování hodnoty
     const displayValue = formatFieldValue(value, field);
+
+    // ✅ Async-select field (pro výběr produktu)
+    // V renderItemField funkci, sekce pro async-select:
+    if (field.type === 'async-select' && !isComputed) {
+      return (
+        <div key={field.key} className="flex flex-col">
+          {itemIndex === 0 && (
+            <Label className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
+              {field.label}
+              {field.required && <span className="text-red-500 ml-0.5">*</span>}
+            </Label>
+          )}
+          <div className="async-select-compact">
+            <AsyncSelectFilter
+              filter={{
+                key: field.key,
+                label: '',
+                endpoint: field.endpoint,
+                valueKey: field.optionValue || 'id',
+                labelKey: field.optionLabel || 'name',
+                queryParamKey: field.queryParamKey || field.optionLabel || 'name',
+                placeholder: field.placeholder || 'Vyberte...',
+                minChars: field.minChars ?? 0,
+              }}
+              value={value}
+              onChange={(newValue, selectedItemData) => {
+                console.log('Async select change:', { newValue, selectedItemData });
+                
+                // ✅ OPRAVA: Vytvořit nový objekt s všemi změnami najednou
+                const updates = { [field.key]: newValue };
+                
+                // Aplikovat fillFields pokud jsou definována
+                if (field.fillFields && selectedItemData) {
+                  console.log('Applying fillFields:', field.fillFields);
+                  Object.entries(field.fillFields).forEach(([targetField, sourceField]) => {
+                    const fillValue = typeof sourceField === 'function'
+                      ? sourceField(selectedItemData)
+                      : selectedItemData[sourceField];
+                    console.log(`Filling ${targetField} with`, fillValue);
+                    updates[targetField] = fillValue;
+                  });
+                }
+                
+                // Aplikovat všechny změny najednou
+                const newItems = items.map((item, i) => {
+                  if (i !== itemIndex) return item;
+                  return { ...item, ...updates };
+                });
+                onChange(newItems);
+              }}
+              returnFullItem={true}
+            />
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div key={field.key} className="flex flex-col">
