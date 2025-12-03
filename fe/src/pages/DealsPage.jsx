@@ -39,9 +39,10 @@ export const DealsPage = () => {
       const response = await api.get(url);
       console.log('📦 Received deals:', response.data);
       setDeals(response.data);
+      showToast('success', `Data načtena`);
     } catch (err) {
-      setError(err.message);
-      console.error('Error fetching deals:', err);
+      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
+      showToast('error', `Chyba při načítání záznamu: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -86,9 +87,11 @@ export const DealsPage = () => {
     try {
       await api.post(`/api/v1/deals/${deal.id}/confirm`);
       fetchDeals();
+      showToast('success', `Data úspešně načtena`);
     } catch (err) {
       console.error('Error confirming deal:', err);
-      alert('Chyba při potvrzování dealu');
+      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
+      showToast('error', `Chyba při načítání dat: ${errorMsg}`);
     }
   };
 
@@ -97,9 +100,10 @@ export const DealsPage = () => {
     try {
       await api.post(`/api/v1/deals/${deal.id}/start`);
       fetchDeals();
+      showToast('success', `Deal ${deal.deal_number} zahájen`);
     } catch (err) {
-      console.error('Error starting deal:', err);
-      alert('Chyba při zahájení dealu');
+      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
+      showToast('error', `Chyba při změně stavu dealu: ${errorMsg}`);
     }
   };
 
@@ -108,25 +112,10 @@ export const DealsPage = () => {
     try {
       await api.post(`/api/v1/deals/${deal.id}/complete`);
       fetchDeals();
+      showToast('success', `Deal ${deal.deal_number} dokončen`);
     } catch (err) {
-      console.error('Error completing deal:', err);
-      alert('Chyba při dokončování dealu');
-    }
-  };
-
-  const handleCancelDeal = async () => {
-    if (!selectedDeal) return;
-    try {
-      await api.post(`/api/v1/deals/${selectedDeal.id}/cancel`, null, {
-        params: { reason: cancelReason },
-      });
-      setCancelModalOpen(false);
-      setCancelReason('');
-      setSelectedDeal(null);
-      fetchDeals();
-    } catch (err) {
-      console.error('Error cancelling deal:', err);
-      alert('Chyba při rušení dealu');
+      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
+      showToast('error', `Chyba při změně stavu dealu: ${errorMsg}`);
     }
   };
 
@@ -947,13 +936,6 @@ export const DealsPage = () => {
         condition: (deal) => deal.status === 'in_progress',
         onClick: handleCompleteDeal,
       },
-      {
-        label: '❌ Zrušit',
-        icon: HiOutlineX,
-        color: 'red',
-        condition: (deal) => !['completed', 'cancelled'].includes(deal.status),
-        onClick: openCancelModal,
-      },
 
       // =====================================================
       // FAKTURACE - Přesměrování místo modálu
@@ -976,12 +958,6 @@ export const DealsPage = () => {
       // =====================================================
       // DALŠÍ AKCE
       // =====================================================
-      {
-        label: '🔄 Přepočítat platby',
-        icon: HiOutlineRefresh,
-        color: 'gray',
-        onClick: handleRecalculatePayments,
-      },
       {
         label: '👁️ Zobrazit faktury',
         icon: HiOutlineEye,
@@ -1037,42 +1013,6 @@ export const DealsPage = () => {
   return (
     <div className="p-6">
       <DataTable config={tableConfig} />
-
-      {/* =====================================================
-          MODAL - Zrušení dealu (jediný zbývající modál)
-          ===================================================== */}
-      <Modal show={cancelModalOpen} onClose={() => setCancelModalOpen(false)} size="md">
-        <Modal.Header>❌ Zrušit deal</Modal.Header>
-        <Modal.Body>
-          {selectedDeal && (
-            <div className="space-y-4">
-              <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Rušíte deal:</p>
-                <p className="font-semibold">{selectedDeal.deal_number} - {selectedDeal.title}</p>
-              </div>
-
-              <div>
-                <Label htmlFor="cancel_reason">Důvod zrušení</Label>
-                <TextInput
-                  id="cancel_reason"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="Proč rušíte tento deal?"
-                />
-              </div>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button color="gray" onClick={() => setCancelModalOpen(false)}>
-            Zpět
-          </Button>
-          <Button color="failure" onClick={handleCancelDeal}>
-            <HiOutlineX className="mr-2 h-5 w-5" />
-            Zrušit deal
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 };
