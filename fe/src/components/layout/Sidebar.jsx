@@ -8,7 +8,8 @@ import {
   HiOutlinePlusSm,
   HiUser,
   HiUsers,
-  HiViewBoards
+  HiViewBoards,
+  HiBriefcase 
 } from 'react-icons/hi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { twMerge } from "tailwind-merge";
@@ -89,6 +90,33 @@ export const Sidebar = () => {
                   href="#"
                   onClick={(e) => handleNavigation(e, '/leads/kanban')}
                   active={isActive('/leads/kanban')}
+                >
+                  Přehled
+                </SidebarItem>
+              </SidebarCollapse>
+            </SidebarItemGroup>
+          </PermissionGuard>
+          <PermissionGuard requireAdmin="users">
+            <SidebarItemGroup>
+              <SidebarCollapse
+                icon={HiBriefcase}
+                label="Objednávky"
+                renderChevronIcon={(theme, open) => {
+                  const IconComponent = open ? HiOutlineMinusSm : HiOutlinePlusSm;
+                  return <IconComponent aria-hidden className={twMerge(theme.label.icon.open[open ? "on" : "off"])} />;
+                }}
+              >
+                <SidebarItem
+                  href="#"
+                  onClick={(e) => handleNavigation(e, '/deals')}
+                  active={isActive('/deals')}
+                >
+                 V tabulce
+                </SidebarItem>
+                <SidebarItem
+                  href="#"
+                  onClick={(e) => handleNavigation(e, '/deals/kanban')}
+                  active={isActive('/deals/kanban')}
                 >
                   Přehled
                 </SidebarItem>

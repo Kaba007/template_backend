@@ -242,6 +242,28 @@ export const LeadsKanbanPage = () => {
         placeholder: 'např. Nový web pro e-shop',
         formSection: 'basic', // ✅
       },
+          {
+      key: 'user_id',
+      label: 'Vlastník',
+      type: 'async-select',
+      sortable: true,
+      required: true,
+      editable: true,
+      showInTable: false,
+      showInForm: true,
+      endpoint: '/api/v1/users',
+      optionValue: 'id',
+      optionLabel: 'client_id',
+      queryParamKey: 'client_id',
+      placeholder: 'Vyberte vlastníka...',
+      formSection: 'basic',
+      enrich: {
+        endpoint: '/api/v1/users',
+        foreignKey: 'id',
+        displayField: 'client_id',
+        showAsBadge: false,
+      },
+    },
             {
         key: 'assigned_to',
         label: 'Přiřazeno',

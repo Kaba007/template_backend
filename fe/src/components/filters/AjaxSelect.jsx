@@ -248,9 +248,9 @@ export const AsyncSelectFilter = ({ filter, value, onChange, returnFullItem = fa
 
         {/* Dropdown s výsledky */}
         {isDropdownOpen && !selectedOption && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-600 max-h-60 overflow-y-auto">
+         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-600 max-h-60 overflow-y-auto">
             {inputValue.length < minChars ? (
-              <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 ">
                 Zadejte alespoň {minChars} {minChars === 1 ? 'znak' : minChars < 5 ? 'znaky' : 'znaků'}...
               </div>
             ) : loading ? (
