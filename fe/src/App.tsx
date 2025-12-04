@@ -15,6 +15,8 @@ import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { DealsPage } from './pages/DealsPage';
+import {DealsKanbanPage } from  './pages/DealsKanbanPage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -69,6 +71,16 @@ function App() {
               <ProtectedRoute requirePermission="users.read">
                 <Layout>
                   <DealsPage />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+            <Route
+            path="/deals/kanban"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                  <DealsKanbanPage />
                 </Layout>
               </ProtectedRoute>
             }

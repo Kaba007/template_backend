@@ -1,8 +1,6 @@
-// src/pages/DealsPage.jsx - FINÁLNÍ VERZE
-import { Button, Modal, Spinner, TextInput, Label } from 'flowbite-react';
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useToast } from '../contexts/ToastContext';
+// src/pages/DealsKanbanPage.jsx
+import { Spinner } from 'flowbite-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   HiOutlineCheck,
   HiOutlineDocumentText,
@@ -10,44 +8,105 @@ import {
   HiOutlineX,
   HiOutlineRefresh,
   HiOutlineEye,
+  HiCurrencyDollar,
+  HiOfficeBuilding,
+  HiDocument,
+  HiClock,
 } from 'react-icons/hi';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
-import { DataTable } from '../components/DataTable/DataTable';
+import { KanbanBoard } from '../components/Kanban/KanbanBoard';
+import { useToast } from '../contexts/ToastContext';
 
-export const DealsPage = () => {
+// Definice klíčů filtrů
+const FILTER_KEYS = [
+  'status',
+  'payment_status',
+  'company_id',
+  'assigned_to',
+  'date_from',
+  'date_to',
+  'search'
+];
+
+// Default filtry - nezobrazujeme cancelled a completed
+const DEFAULT_FILTERS = {
+  status: 'draft,confirmed,in_progress',
+};
+
+export const DealsKanbanPage = () => {
   const [loading, setLoading] = useState(true);
   const [deals, setDeals] = useState([]);
   const [error, setError] = useState(null);
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  // Modal pro zrušení dealu
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState('');
-  const [selectedDeal, setSelectedDeal] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const { showToast } = useToast();
 
-  // Fetch data z API
+  // Načti filtry z URL
+  const currentFilters = useMemo(() => {
+    const filters = {};
+
+    FILTER_KEYS.forEach(key => {
+      const value = searchParams.get(key);
+      if (value !== null) {
+        if (value === 'true') {
+          filters[key] = true;
+        } else if (value === 'false') {
+          filters[key] = false;
+        } else {
+          filters[key] = value;
+        }
+      }
+    });
+
+    if (Object.keys(filters).length === 0) {
+      return DEFAULT_FILTERS;
+    }
+
+    return filters;
+  }, [searchParams]);
+
+  // Ulož filtry do URL
+  const applyFilters = useCallback((newFilters) => {
+    const params = new URLSearchParams();
+
+    Object.entries(newFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.set(key, String(value));
+      }
+    });
+
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
+
+  // Fetch deals
   const fetchDeals = useCallback(async () => {
     try {
       setLoading(true);
-      const queryString = searchParams.toString();
+
+      const queryParams = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          queryParams.append(key, value);
+        }
+      });
+
+      const queryString = queryParams.toString();
       const url = `/api/v1/deals${queryString ? `?${queryString}` : ''}`;
 
-      console.log('🌐 Fetching URL:', url);
+      console.log('📡 Fetching deals:', url);
 
       const response = await api.get(url);
-      console.log('📦 Received deals:', response.data);
       setDeals(response.data);
-      showToast('success', `Data načtena`);
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
-      showToast('error', `Chyba při načítání záznamu: ${errorMsg}`);
+      setError(err.message);
+      console.error('Error fetching deals:', err);
     } finally {
       setLoading(false);
     }
-  }, [searchParams]);
+  }, [currentFilters]);
 
+  // Načtení dat při změně URL (filtrů)
   useEffect(() => {
     fetchDeals();
   }, [fetchDeals]);
@@ -82,86 +141,75 @@ export const DealsPage = () => {
   // =====================================================
   // WORKFLOW HANDLERS
   // =====================================================
-  const handleConfirmDeal = async (deal) => {
+  const handleConfirmDeal = useCallback(async (deal) => {
     if (!window.confirm(`Potvrdit deal "${deal.title}"?`)) return;
     try {
       await api.post(`/api/v1/deals/${deal.id}/confirm`);
-      fetchDeals();
-      showToast('success', `Data úspešně načtena`);
+      showToast('success', `Deal ${deal.deal_number} byl potvrzen`);
+      await fetchDeals();
     } catch (err) {
       console.error('Error confirming deal:', err);
       const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
-      showToast('error', `Chyba při načítání dat: ${errorMsg}`);
+      showToast('error', `Chyba při potvrzování dealu: ${errorMsg}`);
     }
-  };
+  }, [fetchDeals, showToast]);
 
-  const handleStartDeal = async (deal) => {
+  const handleStartDeal = useCallback(async (deal) => {
     if (!window.confirm(`Zahájit realizaci dealu "${deal.title}"?`)) return;
     try {
       await api.post(`/api/v1/deals/${deal.id}/start`);
-      fetchDeals();
       showToast('success', `Deal ${deal.deal_number} zahájen`);
+      await fetchDeals();
     } catch (err) {
       const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
       showToast('error', `Chyba při změně stavu dealu: ${errorMsg}`);
     }
-  };
+  }, [fetchDeals, showToast]);
 
-  const handleCompleteDeal = async (deal) => {
+  const handleCompleteDeal = useCallback(async (deal) => {
     if (!window.confirm(`Označit deal "${deal.title}" jako dokončený?`)) return;
     try {
       await api.post(`/api/v1/deals/${deal.id}/complete`);
-      fetchDeals();
       showToast('success', `Deal ${deal.deal_number} dokončen`);
+      await fetchDeals();
     } catch (err) {
       const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message;
       showToast('error', `Chyba při změně stavu dealu: ${errorMsg}`);
     }
-  };
+  }, [fetchDeals, showToast]);
 
-  /**
-   * Vytvoří fakturu z dealu pomocí backend API
-   * @param {Object} deal - Deal objekt
-   * @param {string} invoiceType - Typ faktury ('invoice' | 'proforma')
-   */
-  const handleCreateInvoice = async (deal, invoiceType = 'invoice') => {
+  const handleCreateInvoice = useCallback(async (deal, invoiceType = 'invoice') => {
     try {
-      // 1. Kontrola že deal má firmu
       if (!deal.company_id && !deal.company_name) {
-        alert('⚠️ Deal nemá přiřazenou firmu.\nNelze vystavit fakturu bez údajů o odběrateli.');
+        showToast('error', 'Deal nemá přiřazenou firmu. Nelze vystavit fakturu bez údajů o odběrateli.');
         return;
       }
 
-      // 2. Zjistit dodavatele
-      // V produkci by mělo být v systémových nastavení, zatím použijeme první firmu typu supplier
       const suppliersResponse = await api.get('/api/v1/companies/suppliers?limit=1');
       const suppliers = suppliersResponse.data;
       
       if (!suppliers || suppliers.length === 0) {
-        alert('⚠️ Není nastaven žádný dodavatel.\n\nProsím, nejprve vytvořte dodavatele v sekci Firmy a označte ho jako "Dodavatel".');
+        showToast('error', 'Není nastaven žádný dodavatel. Prosím, nejprve vytvořte dodavatele v sekci Firmy.');
         return;
       }
 
       const supplierId = suppliers[0].id;
-
-      // 3. Připravit data pro vytvoření faktury
       const today = new Date().toISOString().split('T')[0];
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 14); // Splatnost 14 dní (lze změnit)
+      dueDate.setDate(dueDate.getDate() + 14);
       const dueDateStr = dueDate.toISOString().split('T')[0];
 
       const invoiceData = {
         deal_id: deal.id,
         supplier_id: supplierId,
-        invoice_type: invoiceType, // 'invoice' nebo 'proforma'
+        invoice_type: invoiceType,
         issue_date: today,
         due_date: dueDateStr,
-        tax_date: today, // DUZP = datum vystavení
+        tax_date: today,
         notes: deal.notes || null,
-        order_number: deal.deal_number, // Číslo objednávky na faktuře
+        order_number: deal.deal_number,
       };
 
-      // 4. Volání backend API
       console.log('📤 Vytváření faktury z dealu:', deal.deal_number, 'typu:', invoiceType);
       
       const response = await api.post(
@@ -169,63 +217,59 @@ export const DealsPage = () => {
         invoiceData
       );
       
-      // 5. Úspěšné vytvoření
       const typeLabel = invoiceType === 'proforma' ? 'Proforma' : 'Faktura';
-      alert(
-        `✅ ${response.data.message}\n\n` +
-        `${typeLabel}: ${response.data.invoice_number}\n` +
-        `Deal: ${response.data.deal_number}\n` +
-        `Celkem: ${response.data.total} ${response.data.currency}`
-      );
+      showToast('success', `${typeLabel} ${response.data.invoice_number} byla vytvořena`);
       
-      // 6. Refresh seznamu dealů (může se změnit payment_status)
-      fetchDeals();
-      
-      // 7. Přesměrovat na detail faktury
+      await fetchDeals();
       navigate(`/invoices?id=${response.data.invoice_id}`);
       
     } catch (err) {
       console.error('❌ Error creating invoice:', err);
-      
-      // Rozpoznání různých typů chyb
       let errorMsg = 'Neznámá chyba při vytváření faktury';
-      
       if (err.response?.data?.detail) {
-        // FastAPI error detail
         errorMsg = err.response.data.detail;
       } else if (err.message) {
         errorMsg = err.message;
       }
-      
-      alert(`❌ Chyba při vytváření faktury:\n\n${errorMsg}`);
+      showToast('error', `Chyba při vytváření faktury: ${errorMsg}`);
     }
-  };
+  }, [fetchDeals, navigate, showToast]);
 
-  const handleRecalculatePayments = async (deal) => {
+  const handleDuplicate = useCallback(async (deal) => {
     try {
-      await api.post(`/api/v1/deals/${deal.id}/recalculate-payments`);
-      fetchDeals();
+      const response = await api.get(`/api/v1/deals/${deal.id}`);
+      const originalDeal = response.data;
+
+      const { id, deal_number, created_at, updated_at, completed_at, ...dealData } = originalDeal;
+
+      const newDeal = {
+        ...dealData,
+        title: `[KOPIE] ${dealData.title}`,
+        status: 'draft',
+        payment_status: 'unpaid',
+        paid_amount: 0,
+      };
+
+      await api.post('/api/v1/deals', newDeal);
+      showToast('success', 'Deal byl úspěšně duplikován');
+      await fetchDeals();
     } catch (err) {
-      console.error('Error recalculating payments:', err);
+      console.error('Error duplicating deal:', err);
+      showToast('error', 'Chyba při duplikování dealu');
     }
-  };
+  }, [fetchDeals, showToast]);
 
-  const openCancelModal = (deal) => {
-    setSelectedDeal(deal);
-    setCancelReason('');
-    setCancelModalOpen(true);
-  };
+  // Konfigurace Kanbanu
+  const kanbanConfig = useMemo(() => ({
+    title: 'Sales Pipeline - Dealy',
 
-  // =====================================================
-  // TABLE CONFIG
-  // =====================================================
-  const tableConfig = {
-    title: 'Správa objednávek (Deals)',
-    serverSideFiltering: true,
-
-    formModal: {
-      size: '8xl',
-    },
+    columns: [
+      { key: 'draft', label: '📝 Koncept', color: 'gray' },
+      { key: 'confirmed', label: '✅ Potvrzeno', color: 'blue' },
+      { key: 'in_progress', label: '🔄 V realizaci', color: 'yellow' },
+      { key: 'completed', label: '✔️ Dokončeno', color: 'green' },
+      { key: 'cancelled', label: '❌ Zrušeno', color: 'red' },
+    ],
 
     formSections: [
       {
@@ -279,7 +323,11 @@ export const DealsPage = () => {
       },
     ],
 
-    columns: [
+    formModal: {
+      size: '8xl',
+    },
+
+    fields: [
       // =====================================================
       // ZÁKLADNÍ ÚDAJE
       // =====================================================
@@ -287,18 +335,16 @@ export const DealsPage = () => {
         key: 'id',
         label: 'ID',
         type: 'number',
-        sortable: true,
         editable: false,
-        showInTable: false,
+        showInCard: false,
         showInForm: false,
       },
       {
         key: 'deal_number',
         label: 'Číslo',
         type: 'text',
-        sortable: true,
         editable: false,
-        showInTable: true,
+        showInCard: true,
         showInForm: false,
         helpText: 'Generováno automaticky',
       },
@@ -306,35 +352,40 @@ export const DealsPage = () => {
         key: 'title',
         label: 'Název',
         type: 'text',
-        sortable: true,
         required: true,
         editable: true,
-        showInTable: true,
+        showInCard: true,
         showInForm: true,
         placeholder: 'např. Web pro ACME s.r.o.',
         formSection: 'basic',
       },
-       {
+      {
         key: 'user_id',
-        label: 'Přiřazeno',
+        label: 'Vlastník',
         type: 'async-select',
-        sortable: true,
+        required: true,
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         endpoint: '/api/v1/users',
         optionValue: 'id',
         optionLabel: 'client_id',
         queryParamKey: 'client_id',
-        placeholder: 'Přiřadit kolegovi...',
+        placeholder: 'Vyberte vlastníka...',
         formSection: 'basic',
+        enrich: {
+          endpoint: '/api/v1/users',
+          foreignKey: 'id',
+          displayField: 'client_id',
+          showAsBadge: false,
+        },
       },
       {
         key: 'description',
         label: 'Popis',
         type: 'textarea',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: 'Detailní popis objednávky...',
         formSection: 'basic',
@@ -343,10 +394,9 @@ export const DealsPage = () => {
         key: 'status',
         label: 'Status',
         type: 'select',
-        sortable: true,
         required: true,
-        editable: true,
-        showInTable: true,
+        editable: false,
+        showInCard: false,
         showInForm: true,
         options: [
           { value: 'draft', label: '📝 Koncept' },
@@ -362,9 +412,8 @@ export const DealsPage = () => {
         key: 'lead_id',
         label: 'Zdrojový Lead',
         type: 'async-select',
-        sortable: false,
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         endpoint: '/api/v1/leads/simple',
         optionValue: 'id',
@@ -379,6 +428,7 @@ export const DealsPage = () => {
           displayField: 'title',
         },
       },
+
       // =====================================================
       // ZÁKAZNÍK
       // =====================================================
@@ -386,9 +436,8 @@ export const DealsPage = () => {
         key: 'company_id',
         label: 'Firma (z databáze)',
         type: 'async-select',
-        sortable: true,
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         endpoint: '/api/v1/companies/customers',
         optionValue: 'id',
@@ -413,9 +462,8 @@ export const DealsPage = () => {
         key: 'company_name',
         label: 'Firma',
         type: 'text',
-        sortable: true,
         editable: true,
-        showInTable: true,
+        showInCard: true,
         showInForm: true,
         placeholder: 'ACME s.r.o.',
         helpText: 'Pokud firma není v databázi',
@@ -426,7 +474,7 @@ export const DealsPage = () => {
         label: 'Kontaktní osoba',
         type: 'text',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: 'Jan Novák',
         formSection: 'company',
@@ -435,9 +483,8 @@ export const DealsPage = () => {
         key: 'email',
         label: 'Email',
         type: 'text',
-        sortable: true,
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: 'kontakt@firma.cz',
         formSection: 'company',
@@ -447,14 +494,14 @@ export const DealsPage = () => {
         label: 'Telefon',
         type: 'text',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: '+420 123 456 789',
         formSection: 'company',
       },
 
       // =====================================================
-      // POLOŽKY - TYPE ARRAY s podporou ajax-select
+      // POLOŽKY
       // =====================================================
       {
         key: 'items',
@@ -462,7 +509,7 @@ export const DealsPage = () => {
         type: 'array',
         required: true,
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         minItems: 1,
         maxItems: 100,
@@ -481,7 +528,6 @@ export const DealsPage = () => {
           vat_rate: 21,
         },
         itemFields: [
-          // ✅ ASYNC SELECT pro výběr produktu z katalogu
           {
             key: 'product_id',
             label: 'Produkt',
@@ -491,8 +537,7 @@ export const DealsPage = () => {
             optionLabel: 'name',
             queryParamKey: 'name',
             placeholder: 'Vybrat produkt z katalogu...',
-            minChars: 0, // Zobrazí všechny produkty i bez zadání
-            // Automaticky vyplní ostatní pole po výběru produktu
+            minChars: 0,
             fillFields: {
               name: 'name',
               code: 'code',
@@ -551,7 +596,6 @@ export const DealsPage = () => {
             type: 'number',
             defaultValue: 21,
           },
-          // Computed fields
           {
             key: 'subtotal',
             label: 'Základ',
@@ -605,15 +649,14 @@ export const DealsPage = () => {
       },
 
       // =====================================================
-      // CELKOVÉ SOUČTY (COMPUTED)
+      // CELKOVÉ SOUČTY
       // =====================================================
       {
         key: 'subtotal',
         label: 'Základ bez DPH',
         type: 'currency',
-        sortable: true,
         editable: false,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         computed: (formData) => calculateSubtotal(formData.items),
         formSection: 'totals',
@@ -622,9 +665,8 @@ export const DealsPage = () => {
         key: 'total_vat',
         label: 'DPH celkem',
         type: 'currency',
-        sortable: true,
         editable: false,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         computed: (formData) => calculateVat(formData.items),
         formSection: 'totals',
@@ -634,7 +676,7 @@ export const DealsPage = () => {
         label: 'Zaokrouhlení',
         type: 'currency',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         defaultValue: 0,
         formSection: 'totals',
@@ -643,15 +685,18 @@ export const DealsPage = () => {
         key: 'total',
         label: 'Celkem k úhradě',
         type: 'currency',
-        sortable: true,
         editable: false,
-        showInTable: true,
+        showInCard: true,
         showInForm: true,
         computed: (formData) => {
           const subtotal = calculateSubtotal(formData.items);
           const vat = calculateVat(formData.items);
           const rounding = formData.rounding || 0;
           return subtotal + vat + rounding;
+        },
+        formatValue: (value) => {
+          if (!value || value === 0) return '—';
+          return `${value.toLocaleString('cs-CZ')} Kč`;
         },
         formSection: 'totals',
       },
@@ -664,7 +709,7 @@ export const DealsPage = () => {
         label: 'Měna',
         type: 'select',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         options: [
           { value: 'CZK', label: 'CZK' },
@@ -679,7 +724,7 @@ export const DealsPage = () => {
         label: 'Sleva na celou objednávku',
         type: 'number',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         defaultValue: 0,
         formSection: 'finance',
@@ -689,7 +734,7 @@ export const DealsPage = () => {
         label: 'Typ slevy',
         type: 'select',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         options: [
           { value: 'percent', label: 'Procenta (%)' },
@@ -702,9 +747,8 @@ export const DealsPage = () => {
         key: 'payment_status',
         label: 'Stav platby',
         type: 'select',
-        sortable: true,
         editable: false,
-        showInTable: true,
+        showInCard: true,
         showInForm: false,
         options: [
           { value: 'unpaid', label: '⏳ Nezaplaceno' },
@@ -718,9 +762,8 @@ export const DealsPage = () => {
         key: 'paid_amount',
         label: 'Zaplaceno',
         type: 'currency',
-        sortable: true,
         editable: false,
-        showInTable: true,
+        showInCard: false,
         showInForm: false,
         helpText: 'Agregováno z faktur',
       },
@@ -729,7 +772,7 @@ export const DealsPage = () => {
         label: 'Způsob platby',
         type: 'select',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         options: [
           { value: 'bank_transfer', label: '🏦 Bankovní převod' },
@@ -749,9 +792,8 @@ export const DealsPage = () => {
         key: 'deal_date',
         label: 'Datum uzavření',
         type: 'date',
-        sortable: true,
         editable: true,
-        showInTable: true,
+        showInCard: false,
         showInForm: true,
         formSection: 'dates',
       },
@@ -759,9 +801,8 @@ export const DealsPage = () => {
         key: 'delivery_date',
         label: 'Očekávané dodání',
         type: 'date',
-        sortable: true,
         editable: true,
-        showInTable: true,
+        showInCard: true,
         showInForm: true,
         formSection: 'dates',
       },
@@ -769,9 +810,8 @@ export const DealsPage = () => {
         key: 'completed_at',
         label: 'Dokončeno',
         type: 'datetime',
-        sortable: true,
         editable: false,
-        showInTable: false,
+        showInCard: false,
         showInForm: false,
       },
 
@@ -783,7 +823,7 @@ export const DealsPage = () => {
         label: 'Štítky',
         type: 'tags',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: 'Přidat štítek...',
         formSection: 'notes',
@@ -793,7 +833,7 @@ export const DealsPage = () => {
         label: 'Poznámky (pro zákazníka)',
         type: 'textarea',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: 'Poznámky viditelné na dokladech...',
         formSection: 'notes',
@@ -803,7 +843,7 @@ export const DealsPage = () => {
         label: 'Interní poznámky',
         type: 'textarea',
         editable: true,
-        showInTable: false,
+        showInCard: false,
         showInForm: true,
         placeholder: 'Interní poznámky (nevidí zákazník)...',
         formSection: 'notes',
@@ -816,31 +856,19 @@ export const DealsPage = () => {
         key: 'created_at',
         label: 'Vytvořeno',
         type: 'datetime',
-        sortable: true,
         editable: false,
-        showInTable: true,
+        showInCard: false,
         showInForm: false,
       },
       {
         key: 'updated_at',
         label: 'Upraveno',
         type: 'datetime',
-        sortable: true,
         editable: false,
-        showInTable: false,
+        showInCard: false,
         showInForm: false,
       },
     ],
-
-    data: deals,
-
-    endpoints: {
-      create: '/api/v1/deals',
-      update: '/api/v1/deals',
-      delete: '/api/v1/deals',
-      bulkDelete: '/api/v1/deals/bulk',
-      export: '/api/v1/deals/export',
-    },
 
     filters: [
       {
@@ -903,13 +931,72 @@ export const DealsPage = () => {
       },
     ],
 
-    actions: {
-      create: true,
-      edit: true,
-      delete: true,
-      bulkDelete: true,
-      export: true,
+    defaultFilters: DEFAULT_FILTERS,
+    currentFilters,
+    onApplyFilters: applyFilters,
+
+    cardConfig: {
+      displayFields: ['deal_number', 'title', 'company_name', 'total', 'payment_status', 'delivery_date'],
+      
+      cardColor: (item) => {
+        if (item.payment_status === 'paid') return 'green';
+        if (item.payment_status === 'partial') return 'yellow';
+        if (!item.total || item.total === 0) return 'gray';
+        if (item.total >= 100000) return 'blue';
+        return 'gray';
+      },
+      
+      cardIcon: (item) => {
+        switch (item.status) {
+          case 'draft': return HiDocument;
+          case 'confirmed': return HiOutlineCheck;
+          case 'in_progress': return HiClock;
+          case 'completed': return HiOutlineCheck;
+          case 'cancelled': return HiOutlineX;
+          default: return HiDocument;
+        }
+      },
+      
+      showAvatar: true,
+      avatarInitials: (item) => {
+        if (item.company_name) {
+          return item.company_name.substring(0, 2).toUpperCase();
+        }
+        if (item.deal_number) {
+          return item.deal_number.substring(0, 2).toUpperCase();
+        }
+        return '?';
+      },
+      avatarLabel: (item) => {
+        return item.company_name || item.deal_number || 'Bez firmy';
+      },
+      
+      cardBadges: [
+        {
+          field: 'payment_status',
+          getColor: (value) => {
+            switch (value) {
+              case 'paid': return 'success';
+              case 'partial': return 'warning';
+              case 'unpaid': return 'gray';
+              default: return 'gray';
+            }
+          },
+          formatValue: (value) => {
+            switch (value) {
+              case 'paid': return '✅ Zaplaceno';
+              case 'partial': return '💳 Částečně';
+              case 'unpaid': return '⏳ Nezaplaceno';
+              case 'overpaid': return '➕ Přeplaceno';
+              case 'refunded': return '↩️ Vráceno';
+              default: return value;
+            }
+          },
+        },
+      ],
     },
+
+    data: deals,
 
     contextActions: [
       // =====================================================
@@ -938,7 +1025,7 @@ export const DealsPage = () => {
       },
 
       // =====================================================
-      // FAKTURACE - Přesměrování místo modálu
+      // FAKTURACE
       // =====================================================
       {
         label: '📄 Vystavit fakturu',
@@ -959,6 +1046,11 @@ export const DealsPage = () => {
       // DALŠÍ AKCE
       // =====================================================
       {
+        label: '📄 Duplikovat',
+        icon: HiDocument,
+        onClick: handleDuplicate,
+      },
+      {
         label: '👁️ Zobrazit faktury',
         icon: HiOutlineEye,
         color: 'gray',
@@ -978,12 +1070,24 @@ export const DealsPage = () => {
       },
     ],
 
+    endpoints: {
+      create: '/api/v1/deals',
+      update: '/api/v1/deals',
+      delete: '/api/v1/deals',
+      updateStatus: '/api/v1/deals',
+    },
+    
+    actions: {
+      create: true,
+      edit: true,
+      delete: true,
+      export: true,
+    },
+    
+    statusField: 'status',
     onDataChange: fetchDeals,
-  };
+  }), [deals, currentFilters, applyFilters, fetchDeals, handleConfirmDeal, handleStartDeal, handleCompleteDeal, handleCreateInvoice, handleDuplicate, navigate]);
 
-  // =====================================================
-  // RENDER
-  // =====================================================
   if (loading && deals.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -1011,8 +1115,8 @@ export const DealsPage = () => {
   }
 
   return (
-    <div className="p-6">
-      <DataTable config={tableConfig} />
+    <div className="h-full flex flex-col">
+      <KanbanBoard config={kanbanConfig} />
     </div>
   );
 };

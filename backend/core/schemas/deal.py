@@ -128,7 +128,7 @@ class DealBase(BaseModel):
     """
     # POVINNÁ
     title: str = Field(..., min_length=1, max_length=255, description="Název obchodu/objednávky")
-    user_id: str = Field(..., description="ID uživatele (vlastníka)")
+    user_id:  Union[str, int]  = Field(..., description="ID uživatele (vlastníka)")
 
     # OPTIONAL - Vazby
     lead_id: Optional[Union[str, int]]  = Field(None, description="ID leadu (odkud deal přišel)")

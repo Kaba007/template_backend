@@ -170,7 +170,6 @@ def enrich_deal_response(deal: Deal, db: Session) -> dict:
 async def list_deals(
     skip: int = 0,
     limit: int = 100,
-    status: Optional[DealStatus] = None,
     payment_status: Optional[PaymentStatus] = None,
     company_id: Optional[int] = None,
     search: Optional[str] = None,
@@ -197,9 +196,6 @@ async def list_deals(
         Deal.user_id == current_user.id,
         Deal.is_active == True
     )
-
-    if status:
-        query = query.filter(Deal.status == status)
 
     if payment_status:
         query = query.filter(Deal.payment_status == payment_status)
