@@ -7,7 +7,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from backend.core.db import Base
+from .base import Base
 
 
 class LeadStatus(str, PyEnum):
@@ -37,7 +37,7 @@ class LeadSource(str, PyEnum):
 class Lead(Base):
     """
     Lead - obchodní příležitost
-    
+
     Minimální vytvoření: pouze title + user_id
     """
     __tablename__ = "leads"
@@ -63,74 +63,74 @@ class Lead(Base):
     # NAPOJENÍ NA FIRMU (OPTIONAL!)
     # =====================================================
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     # Pokud není company_id, může mít volný text
     company_name = Column(String(255))  # Název firmy jako text
-    
+
     # =====================================================
     # KONTAKTNÍ ÚDAJE
     # =====================================================
     contact_person = Column(String(255))  # Jméno kontaktní osoby
     email = Column(String(255), index=True)
     phone = Column(String(50))
-    
+
     # =====================================================
     # ZDROJ A TRACKING
     # =====================================================
     source = Column(Enum(LeadSource), default=LeadSource.OTHER)  # Odkud lead přišel
     source_details = Column(String(255))  # Detaily zdroje (např. "Google Ads - Kampaň ABC")
     campaign = Column(String(100))  # Marketing kampaň
-    
+
     # =====================================================
     # DŮLEŽITÁ DATA
     # =====================================================
     expected_close_date = Column(Date, nullable=True)  # Očekávané datum uzavření
     next_action_date = Column(Date, nullable=True)  # Datum další akce
     next_action = Column(String(255))  # Co je třeba udělat příště
-    
+
     # =====================================================
     # KVALIFIKACE
     # =====================================================
     is_qualified = Column(Boolean, default=False)  # Je lead kvalifikován?
     qualification_score = Column(Integer, default=0)  # Skóre kvalifikace (0-100)
-    
+
     # Budget a rozhodovací pravomoc
     has_budget = Column(Boolean, default=None, nullable=True)  # Má rozpočet?
     has_authority = Column(Boolean, default=None, nullable=True)  # Má rozhodovací pravomoc?
     has_need = Column(Boolean, default=None, nullable=True)  # Má skutečnou potřebu?
     has_timeline = Column(Boolean, default=None, nullable=True)  # Má časový plán?
-    
+
     # =====================================================
     # KONVERZE
     # =====================================================
     converted_at = Column(DateTime, nullable=True)  # Kdy byl konvertován
     converted_to_deal_id = Column(
-        Integer, 
-        ForeignKey("deals.id", ondelete="SET NULL"), 
-        nullable=True, 
+        Integer,
+        ForeignKey("deals.id", ondelete="SET NULL"),
+        nullable=True,
         index=True
     )
-    
+
     # =====================================================
     # ZTRÁTA
     # =====================================================
     lost_reason = Column(String(255))  # Důvod ztráty
     lost_at = Column(DateTime, nullable=True)  # Kdy byl ztracen
-    
+
     # =====================================================
     # METADATA
     # =====================================================
     tags = Column(JSON, default=list)  # Štítky
     custom_fields = Column(JSON, default=dict)  # Vlastní pole
     notes = Column(Text)  # Poznámky
-    
+
     # =====================================================
     # AUDIT
     # =====================================================
     is_active = Column(Boolean, default=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    
+
     # Kdo vytvořil/upravil
     created_by = Column(String(100), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     assigned_to = Column(String(100), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)  # Přiřazeno komu
@@ -151,7 +151,7 @@ class Lead(Base):
     creator = relationship("User", foreign_keys=[created_by])
     assignee = relationship("User", foreign_keys=[assigned_to])
     converted_deal = relationship(
-        "Deal", 
+        "Deal",
         foreign_keys=[converted_to_deal_id],
         backref="source_lead"
     )
@@ -201,14 +201,14 @@ class Lead(Base):
         if self.has_need: score += 1
         if self.has_timeline: score += 1
         return score
-    
+
     def convert_to_deal(self, deal_title: str = None) -> dict:
         """
         Připraví data pro vytvoření Dealu z tohoto leadu.
-        
+
         Args:
             deal_title: Volitelný název dealu (default: název leadu)
-            
+
         Returns:
             Dict s daty pro DealCreate schema
         """
@@ -230,7 +230,7 @@ class Lead(Base):
     def mark_as_converted(self, deal_id: int):
         """
         Označí lead jako konvertovaný.
-        
+
         Args:
             deal_id: ID vytvořeného dealu
         """

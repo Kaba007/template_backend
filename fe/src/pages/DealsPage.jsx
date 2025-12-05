@@ -1,18 +1,16 @@
 // src/pages/DealsPage.jsx - FINÁLNÍ VERZE
-import { Button, Modal, Spinner, TextInput, Label } from 'flowbite-react';
+import { Spinner } from 'flowbite-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useToast } from '../contexts/ToastContext';
 import {
   HiOutlineCheck,
   HiOutlineDocumentText,
-  HiOutlinePlay,
-  HiOutlineX,
-  HiOutlineRefresh,
   HiOutlineEye,
+  HiOutlinePlay
 } from 'react-icons/hi';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/client';
 import { DataTable } from '../components/DataTable/DataTable';
+import { useToast } from '../contexts/ToastContext';
 
 export const DealsPage = () => {
   const [loading, setLoading] = useState(true);
@@ -136,7 +134,7 @@ export const DealsPage = () => {
       // V produkci by mělo být v systémových nastavení, zatím použijeme první firmu typu supplier
       const suppliersResponse = await api.get('/api/v1/companies/suppliers?limit=1');
       const suppliers = suppliersResponse.data;
-      
+
       if (!suppliers || suppliers.length === 0) {
         alert('⚠️ Není nastaven žádný dodavatel.\n\nProsím, nejprve vytvořte dodavatele v sekci Firmy a označte ho jako "Dodavatel".');
         return;
@@ -163,12 +161,12 @@ export const DealsPage = () => {
 
       // 4. Volání backend API
       console.log('📤 Vytváření faktury z dealu:', deal.deal_number, 'typu:', invoiceType);
-      
+
       const response = await api.post(
-        `/api/v1/deals/${deal.id}/create-invoice`, 
+        `/api/v1/deals/${deal.id}/create-invoice`,
         invoiceData
       );
-      
+
       // 5. Úspěšné vytvoření
       const typeLabel = invoiceType === 'proforma' ? 'Proforma' : 'Faktura';
       alert(
@@ -177,26 +175,26 @@ export const DealsPage = () => {
         `Deal: ${response.data.deal_number}\n` +
         `Celkem: ${response.data.total} ${response.data.currency}`
       );
-      
+
       // 6. Refresh seznamu dealů (může se změnit payment_status)
       fetchDeals();
-      
+
       // 7. Přesměrovat na detail faktury
       navigate(`/invoices?id=${response.data.invoice_id}`);
-      
+
     } catch (err) {
       console.error('❌ Error creating invoice:', err);
-      
+
       // Rozpoznání různých typů chyb
       let errorMsg = 'Neznámá chyba při vytváření faktury';
-      
+
       if (err.response?.data?.detail) {
         // FastAPI error detail
         errorMsg = err.response.data.detail;
       } else if (err.message) {
         errorMsg = err.message;
       }
-      
+
       alert(`❌ Chyba při vytváření faktury:\n\n${errorMsg}`);
     }
   };
@@ -223,10 +221,16 @@ export const DealsPage = () => {
     title: 'Správa objednávek (Deals)',
     serverSideFiltering: true,
 
+    documents: {
+      enabled: true,           // Povolí správu dokumentů
+      entityType: 'deals',      // Typ entity pro API
+      entityIdField: 'id',     // Pole s ID entity
+      titleField: 'title',     // Pole pro název v modálu
+    },
+
     formModal: {
       size: '8xl',
     },
-
     formSections: [
       {
         key: 'basic',
@@ -283,6 +287,16 @@ export const DealsPage = () => {
       // =====================================================
       // ZÁKLADNÍ ÚDAJE
       // =====================================================
+      {
+        key: 'documents_count',
+        label: 'Přílohy',
+        type: 'documents',     // Speciální typ
+        entityType: 'deals',
+        entityIdField: 'id',
+        sortable: false,
+        showInTable: true,
+        showInForm: false,
+      },
       {
         key: 'id',
         label: 'ID',

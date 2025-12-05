@@ -18,4 +18,3 @@ class VatMode(str, PyEnum):
     REVERSE_CHARGE = "reverse_charge"  # Přenesená daňová povinnost
     OSS = "oss"                      # One Stop Shop (EU)
     EXEMPT = "exempt"                # Osvobozeno od DPH
-

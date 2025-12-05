@@ -1,7 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from typing import Generator
-from backend.core.models.auth import Base
+#from backend.core.models.auth import Base
+from backend.core.models.base import Base
+from backend.core.models.auth import User
 from backend.core.config import get_settings
 
 settings = get_settings()

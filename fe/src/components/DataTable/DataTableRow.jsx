@@ -1,5 +1,6 @@
-import { Button, Checkbox } from 'flowbite-react';
-import { HiPencil, HiTrash } from 'react-icons/hi';
+// src/components/DataTable/DataTableRow.jsx
+import { Button, Checkbox, Tooltip } from 'flowbite-react';
+import { HiPaperClip, HiPencil, HiTrash } from 'react-icons/hi';
 import { DataTableCell } from './DataTableCell';
 
 export const DataTableRow = ({
@@ -12,7 +13,14 @@ export const DataTableRow = ({
   onEdit,
   onDelete,
   hasSelection,
+  onDocumentsClick,
+  documentsConfig,
 }) => {
+  // Kontrola, zda je povolena správa dokumentů
+  const showDocumentsAction = documentsConfig?.enabled &&
+                              documentsConfig?.entityType &&
+                              row[documentsConfig?.entityIdField || 'id'];
+
   return (
     <tr
       onClick={onClick}
@@ -47,6 +55,7 @@ export const DataTableRow = ({
           column={column}
           value={row[column.key]}
           row={row}
+          onDocumentsClick={onDocumentsClick}
         />
       ))}
 
@@ -56,23 +65,44 @@ export const DataTableRow = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2">
-          {onEdit && (
-            <Button
-              size="xs"
-              color="blue"
-              onClick={onEdit}
-            >
-              <HiPencil className="h-4 w-4" />
-            </Button>
+          {/* Tlačítko pro dokumenty */}
+          {showDocumentsAction && (
+            <Tooltip content="Dokumenty">
+              <Button
+                size="xs"
+                color="light"
+                onClick={() => onDocumentsClick?.(row, {
+                  entityType: documentsConfig.entityType,
+                  entityIdField: documentsConfig.entityIdField || 'id'
+                })}
+              >
+                <HiPaperClip className="h-4 w-4" />
+              </Button>
+            </Tooltip>
           )}
+
+          {onEdit && (
+            <Tooltip content="Upravit">
+              <Button
+                size="xs"
+                color="blue"
+                onClick={onEdit}
+              >
+                <HiPencil className="h-4 w-4" />
+              </Button>
+            </Tooltip>
+          )}
+
           {onDelete && (
-            <Button
-              size="xs"
-              color="failure"
-              onClick={onDelete}
-            >
-              <HiTrash className="h-4 w-4" />
-            </Button>
+            <Tooltip content="Smazat">
+              <Button
+                size="xs"
+                color="failure"
+                onClick={onDelete}
+              >
+                <HiTrash className="h-4 w-4" />
+              </Button>
+            </Tooltip>
           )}
         </div>
       </td>

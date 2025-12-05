@@ -110,9 +110,9 @@ class RateLimiter:
 
 
 # Globální instance pro různé use cases
-default_limiter = RateLimiter(requests=500, window=60)  # 100 req/min
-strict_limiter = RateLimiter(requests=150, window=60)    # 10 req/min
-auth_limiter = RateLimiter(requests=500, window=60)      # 5 req/5min
+default_limiter = RateLimiter(requests=500, window=60)
+strict_limiter = RateLimiter(requests=150, window=60)
+auth_limiter = RateLimiter(requests=500, window=60)
 
 
 # Dependency pro FastAPI

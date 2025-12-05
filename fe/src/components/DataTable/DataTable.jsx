@@ -1,8 +1,10 @@
+// src/components/DataTable/DataTable.jsx
 import { Card, Spinner } from 'flowbite-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDataEnrichment } from '../../hooks/useDataEnrichment';
 import { exportToCSV, exportToExcel } from '../../utils/exportUtils';
+import { DocumentModal } from '../Documents/DocumentModal';
 import { ActionBar } from '../layout/ActionBar';
 import { BulkActionModal } from '../Modals/BulkActionModal';
 import { DeleteModal } from '../Modals/DeleteModal';
@@ -27,6 +29,13 @@ export const DataTable = ({ config }) => {
     title = 'Data',
     serverSideFiltering = true,
     formSections = [],
+    // Nová konfigurace pro dokumenty
+    documents = {
+      enabled: false,
+      entityType: null, // např. 'deal', 'invoice', 'lead'
+      entityIdField: 'id', // pole obsahující ID entity
+      titleField: 'title', // pole pro zobrazení názvu v modálu
+    },
   } = config;
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,6 +48,14 @@ export const DataTable = ({ config }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState(null);
   const itemsPerPage = 10;
+
+  // State pro dokumentový modal
+  const [documentModal, setDocumentModal] = useState({
+    open: false,
+    entityType: null,
+    entityId: null,
+    entityTitle: null,
+  });
 
   // Formátování hodnoty filtru pro zobrazení
   const formatFilterDisplayValue = (value, definition) => {
@@ -240,6 +257,25 @@ export const DataTable = ({ config }) => {
     setSelectedItem(item);
   };
 
+  // Handler pro otevření dokumentů
+  const handleDocumentsClick = (row, column) => {
+    const entityType = column?.entityType ||
+                      column?.documentEntityType ||
+                      documents.entityType;
+    const entityId = row[column?.entityIdField || documents.entityIdField || 'id'];
+    const entityTitle = row[documents.titleField] ||
+                       row.title ||
+                       row.name ||
+                       `#${entityId}`;
+
+    setDocumentModal({
+      open: true,
+      entityType,
+      entityId,
+      entityTitle,
+    });
+  };
+
   const refreshData = async () => {
     await onDataChange?.();
   };
@@ -322,6 +358,8 @@ export const DataTable = ({ config }) => {
                 onEdit={actions.edit !== false ? handleEdit : null}
                 onDelete={actions.delete !== false ? handleDelete : null}
                 hasSelection={actions.bulkDelete !== false}
+                onDocumentsClick={handleDocumentsClick}
+                documentsConfig={documents}
               />
             </table>
           </div>
@@ -349,7 +387,7 @@ export const DataTable = ({ config }) => {
           mode={formModal.mode}
           columns={columns}
           formSections={formSections}
-          formModalConfig={config.formModal} 
+          formModalConfig={config.formModal}
           onClose={() => setFormModal({ open: false, item: null, mode: 'create' })}
           onSubmit={handleFormSubmit}
           endpoints={endpoints}
@@ -362,6 +400,16 @@ export const DataTable = ({ config }) => {
           onClose={() => setBulkModal({ open: false, action: null })}
           onConfirm={handleBulkConfirm}
           endpoint={endpoints.bulkDelete}
+        />
+
+        {/* Dokumentový modal */}
+        <DocumentModal
+          open={documentModal.open}
+          onClose={() => setDocumentModal({ open: false, entityType: null, entityId: null, entityTitle: null })}
+          entityType={documentModal.entityType}
+          entityId={documentModal.entityId}
+          entityTitle={documentModal.entityTitle}
+          onDocumentsChange={refreshData}
         />
       </div>
 

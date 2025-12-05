@@ -7,7 +7,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from backend.core.db import Base
+from .base import Base
 from .utils import PaymentMethod
 
 
@@ -44,7 +44,7 @@ class DiscountType(str, PyEnum):
 class Deal(Base):
     """
     Deal - obchod/objednávka.
-    
+
     Vzniká konverzí z Leadu nebo přímým vytvořením.
     Může mít více faktur (zálohy, částečné fakturace, dobropisy).
     """
@@ -62,7 +62,7 @@ class Deal(Base):
     # =====================================================
     # Odkud deal přišel (optional - může být i přímá objednávka)
     lead_id = Column(Integer, ForeignKey("leads.id", ondelete="SET NULL"), nullable=True, index=True)
-    
+
     # Firma (optional - může být i bez firmy)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True, index=True)
     company_name = Column(String(255))  # Název firmy jako text (pokud není v DB)
@@ -110,24 +110,24 @@ class Deal(Base):
     # FINANCE
     # =====================================================
     currency = Column(String(3), default="CZK", nullable=False)
-    
+
     # Součty (vypočtené z položek)
     subtotal = Column(Float, default=0.0)  # Základ bez DPH
-    
+
     # Sleva na celou objednávku
     discount = Column(Float, default=0.0)  # Hodnota slevy
     discount_type = Column(Enum(DiscountType), default=DiscountType.PERCENT)  # Typ slevy
     discount_amount = Column(Float, default=0.0)  # Vypočtená sleva v měně
-    
+
     subtotal_after_discount = Column(Float, default=0.0)  # Základ po slevě
-    
+
     # DPH
     vat_breakdown = Column(JSON, default=dict)  # {"21": {"base": 1000, "vat": 210}, ...}
     total_vat = Column(Float, default=0.0)
-    
+
     # Celkem
     total = Column(Float, default=0.0)
-    
+
     # Zaokrouhlení
     rounding = Column(Float, default=0.0)
 
@@ -182,7 +182,7 @@ class Deal(Base):
     company = relationship("Company", backref="deals", foreign_keys=[company_id])
     assignee = relationship("User", foreign_keys=[assigned_to])
     creator = relationship("User", foreign_keys=[created_by])
-    
+
     # Faktury k tomuto dealu (1:N)
     invoices = relationship("Invoice", back_populates="deal", foreign_keys="Invoice.deal_id")
 

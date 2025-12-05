@@ -39,7 +39,11 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_from_name: str = "App"
-
+    minio_origin:str = "localhost:9000"
+    minio_access_key:str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_secure:bool = False
+    minio_doc_bucket_name: str = "documents"
     #Nastavení Pydantic
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8',extra='ignore')
 

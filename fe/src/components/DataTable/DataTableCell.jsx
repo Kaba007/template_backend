@@ -1,6 +1,8 @@
+// src/components/DataTable/DataTableCell.jsx
 import { Badge } from 'flowbite-react';
+import { DocumentColumnRenderer } from '../Documents/DocumentColumnRenderer';
 
-export const DataTableCell = ({ column, value, row }) => {
+export const DataTableCell = ({ column, value, row, onDocumentsClick }) => {
   const renderCell = () => {
     // Pokud má sloupec enrichment, použij enriched hodnotu
     if (column.enrich) {
@@ -31,6 +33,18 @@ export const DataTableCell = ({ column, value, row }) => {
 
     // Type-based rendering
     switch (column.type) {
+      // ========================================
+      // NOVÝ TYP: documents
+      // ========================================
+      case 'documents':
+        return (
+          <DocumentColumnRenderer
+            entityType={column.entityType || column.documentEntityType}
+            entityId={row[column.entityIdField || 'id']}
+            onClick={() => onDocumentsClick?.(row, column)}
+          />
+        );
+
       case 'badge':
         const badgeColor = column.getBadgeColor ? column.getBadgeColor(value) : 'info';
         const badgeValue = column.formatValue ? column.formatValue(value) : value;
@@ -85,8 +99,8 @@ export const DataTableCell = ({ column, value, row }) => {
       case 'link':
         const linkHref = column.getHref ? column.getHref(value, row) : value;
         const linkText = column.formatValue ? column.formatValue(value) : value;
-        return value ? (<a
-
+        return value ? (
+          <a
             href={linkHref}
             target="_blank"
             rel="noopener noreferrer"

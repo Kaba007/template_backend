@@ -1,3 +1,4 @@
+// src/components/DataTable/DataTableBody.jsx
 import { DataTableRow } from './DataTableRow';
 
 export const DataTableBody = ({
@@ -10,6 +11,8 @@ export const DataTableBody = ({
   onEdit,
   onDelete,
   hasSelection,
+  onDocumentsClick,
+  documentsConfig,
 }) => {
   // Filtrujeme pouze sloupce, které mají být zobrazeny
   const visibleColumns = columns.filter(column => column.showInTable !== false);
@@ -43,6 +46,8 @@ export const DataTableBody = ({
           onEdit={() => onEdit?.(row)}
           onDelete={() => onDelete?.(row)}
           hasSelection={hasSelection}
+          onDocumentsClick={onDocumentsClick}
+          documentsConfig={documentsConfig}
         />
       ))}
     </tbody>

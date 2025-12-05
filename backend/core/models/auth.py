@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum as PyEnum
-
+from .base import Base
 from sqlalchemy import (
     Boolean,
     Column,
@@ -17,7 +17,7 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+#Base = declarative_base()
 
 
 # Enums
@@ -30,7 +30,6 @@ class PermissionType(str, PyEnum):
 # Association Tables
 class UserRoleLink(Base):
     __tablename__ = "user_roles"
-
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     role_id = Column(Integer, ForeignKey("roles.id", ondelete="CASCADE"), nullable=False, index=True)

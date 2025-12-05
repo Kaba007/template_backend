@@ -8,7 +8,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from backend.core.db import Base
+from .base import Base
 from .utils import  PaymentMethod, VatMode
 
 class CompanyType(str, PyEnum):
@@ -128,4 +128,3 @@ class Company(Base):
         if self.address_country_name and self.address_country != "CZ":
             parts.append(self.address_country_name)
         return ", ".join(filter(None, parts))
-

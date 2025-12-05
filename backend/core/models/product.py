@@ -6,14 +6,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from backend.core.db import Base
+from .base import Base
 
 
 class Product(Base):
     """
     Katalog produktů a služeb.
-    
-    Slouží jako šablona - při přidání do Dealu/Faktury 
+
+    Slouží jako šablona - při přidání do Dealu/Faktury
     se hodnoty zkopírují (změna ceny neovlivní staré doklady).
     """
     __tablename__ = "products"
@@ -38,7 +38,7 @@ class Product(Base):
     price = Column(Float, default=0.0, nullable=False)  # Prodejní cena
     currency = Column(String(3), default="CZK")
     tax_rate = Column(Float, default=21.0)  # Výchozí sazba DPH (%)
-    
+
     # Náklady (pro výpočet marže)
     cost = Column(Float, default=0.0)  # Nákupní/vlastní náklady
 

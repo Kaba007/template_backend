@@ -10,7 +10,8 @@ from starlette.middleware.sessions import SessionMiddleware
 import logging
 
 from backend.core.config import get_settings
-from backend.core.db import engine, Base
+from backend.core.db import engine
+from backend.core.models.base import Base
 from backend.core.utils.init_db import init_database
 from backend.apps.admin.admin import setup_admin
 from backend.core.middleware.logging import APILoggingMiddleware
@@ -120,6 +121,7 @@ def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
     from backend.core.routers.customers import router as custemers_router
     from backend.core.routers.products import router as product_router
     from backend.core.routers.deals import router as deal_router
+    from backend.apps.doc.api import   router as att_store_router
 
     prefix_arg=f"/{prefix_}/{version}"
     app.include_router(
@@ -176,6 +178,11 @@ def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
         deal_router,
         prefix=f"{prefix_arg}/deals",
         tags=["deals"]
+    )
+    app.include_router(
+        att_store_router,
+        prefix=f"{prefix_arg}/documents",
+        tags=["documents"]
     )
     logger.info("Routers registered")
 

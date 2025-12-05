@@ -7,7 +7,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from backend.core.db import Base
+from .base import Base
 from .utils import PaymentMethod, VatMode
 
 
@@ -214,7 +214,7 @@ class Invoice(Base):
     customer = relationship("Company", back_populates="invoices_as_customer", foreign_keys=[customer_id])
     creator = relationship("User", backref="created_invoices", foreign_keys=[created_by])
     proforma = relationship("Invoice", remote_side=[id], foreign_keys=[proforma_id])
-    
+
     # Vazba na Deal (NOVÉ!)
     deal = relationship("Deal", back_populates="invoices", foreign_keys=[deal_id])
 
@@ -293,24 +293,24 @@ class Invoice(Base):
     def create_from_deal(cls, deal: "Deal", supplier: "Company", invoice_type: InvoiceType = InvoiceType.INVOICE, **kwargs) -> "Invoice":
         """
         Vytvoří fakturu z dealu.
-        
+
         Args:
             deal: Deal objekt
             supplier: Company objekt (dodavatel/vaše firma)
             invoice_type: Typ faktury (invoice, proforma, ...)
             **kwargs: Dodatečné parametry (issue_date, due_date, ...)
-        
+
         Returns:
             Invoice instance (neuložená)
         """
         # Získání zákazníka z dealu
         customer = deal.company
-        
+
         # Připrav základní data
         invoice_data = {
             'deal_id': deal.id,
             'invoice_type': invoice_type,
-            
+
             # Dodavatel
             'supplier_id': supplier.id,
             'supplier_name': supplier.name,
@@ -329,7 +329,7 @@ class Invoice(Base):
             'supplier_bank_account': getattr(supplier, 'bank_account', None),
             'supplier_bank_iban': getattr(supplier, 'bank_iban', None),
             'supplier_bank_swift': getattr(supplier, 'bank_swift', None),
-            
+
             # Odběratel
             'customer_id': customer.id if customer else None,
             'customer_name': customer.name if customer else deal.company_name,
@@ -343,24 +343,24 @@ class Invoice(Base):
             'customer_address_country': getattr(customer, 'address_country', None) if customer else None,
             'customer_email': deal.email or (getattr(customer, 'email', None) if customer else None),
             'customer_phone': deal.phone or (getattr(customer, 'phone', None) if customer else None),
-            
+
             # Měna
             'currency': deal.currency,
-            
+
             # Položky z dealu
             'items': deal.create_invoice_items(),
-            
+
             # Číslo objednávky
             'order_number': deal.deal_number,
         }
-        
+
         # Poznámky - pouze pokud nejsou v kwargs
         if 'notes' not in kwargs and deal.notes:
             invoice_data['notes'] = deal.notes
-        
+
         # Přidej kwargs (přepíšou výchozí hodnoty)
         invoice_data.update(kwargs)
-        
+
         invoice = cls(**invoice_data)
         invoice.recalculate_totals()
         return invoice
