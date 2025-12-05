@@ -5,18 +5,18 @@ import { AuthProvider } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { CompaniesPage } from "./pages/CompaniesPage";
 import { DashboardPage } from './pages/DashboardPage';
+import { DealsKanbanPage } from './pages/DealsKanbanPage';
+import { DealsPage } from './pages/DealsPage';
+import { DocumentsPage } from './pages/DocumentsPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { InvoicesPage } from './pages/InvoicesPage';
 import { LeadsKanbanPage } from "./pages/KanbanPage";
 import { LeadsPage } from './pages/LeadsPage';
 import { LoginPage } from './pages/LoginPage';
+import { ProductsPage } from './pages/ProductsPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { UsersPage } from './pages/UsersPage';
-import { ProductsPage } from './pages/ProductsPage';
-import { DealsPage } from './pages/DealsPage';
-import {DealsKanbanPage } from  './pages/DealsKanbanPage';
-
 function App() {
   return (
     <BrowserRouter>
@@ -125,7 +125,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="/leads/table"
             element={
@@ -157,7 +157,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-                    <Route
+          <Route
             path="/companies"
             element={
               <ProtectedRoute requirePermission="users.read">
@@ -167,7 +167,16 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/documents"
+            element={
+              <ProtectedRoute requirePermission="users.read">
+                <Layout>
+                < DocumentsPage />
+                 </Layout>
+              </ProtectedRoute>
+            }
+          />
 
           // Pro vytvoření nového leadu s předvyplněným klientem
           <Route

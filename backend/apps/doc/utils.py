@@ -98,11 +98,11 @@ def get_entity_info(db: Session, entity_type: str, entity_id: int) -> Optional[D
                 }
         #Copany
         elif entity_type_lower == "companies":
-            lead = db.query(Company).filter(Company.id == entity_id).first()
-            if lead:
+            company = db.query(Company).filter(Company.id == entity_id).first()
+            if company:
                 return {
-                    "id": lead.id,
-                    "name": lead.name if hasattr(lead, 'name') else None,
+                    "id": company.id,
+                    "name": company.name if hasattr(company, 'name') else None,
                     "dir_name":"Firmy"
 
                 }
