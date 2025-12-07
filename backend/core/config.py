@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     Může obsahovat další informace navíc.
     """
     app_name: str = "Base Backend Application"
+    api_base_url: str = "http://localhost:8001"  
     version: str = "1.0.0"
     description: str = "Backend application with authentication and RBAC"
     logging_level: int = 40
@@ -39,7 +40,8 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_from_name: str = "App"
-    minio_origin:str = "localhost:9000"
+    use_blob_storage: bool = False
+    minio_origin:str = "minio:9000"
     minio_access_key:str = "minioadmin"
     minio_secret_key: str = "minioadmin"
     minio_secure:bool = False

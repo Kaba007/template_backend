@@ -21,7 +21,7 @@ services:
       - redis
       - minio
     networks:
-      - app-network
+      - kerberos-app-network
     volumes:
       - ./app:/app/service/api/app  # Your FastAPI code
       - ./database.db:/app/database.db  # SQLite database from root
@@ -41,7 +41,7 @@ services:
     volumes:
       - minio-data:/data
     networks:
-      - app-network
+      - kerberos-app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -58,7 +58,7 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - app-network
+      - kerberos-app-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -73,5 +73,5 @@ volumes:
     driver: local
 
 networks:
-  app-network:
+  kerberos-app-network:
     driver: bridge

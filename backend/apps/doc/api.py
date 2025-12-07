@@ -12,11 +12,14 @@ from backend.core.models.auth import User, PermissionType
 from .model import Document
 from .utils import verify_entity_exists, get_entity_info
 from minio import Minio
+from datetime import timedelta
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
+# Vytvoř serializer pro generování tokenů
 
 settings = get_settings()
 router = APIRouter()
-
+token_serializer = URLSafeTimedSerializer(settings.secret_key)
 # MinIO konfigurace
 minio_client = Minio(
     settings.minio_origin,
@@ -222,6 +225,110 @@ async def download_document(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Download failed: {str(e)}")
 
+# V backendu přidej endpoint
+@router.get("/{document_id}/public-url",
+            dependencies=[Depends(require_permissions("documents", PermissionType.READ))]
+            )
+async def get_public_url(
+    document_id: int,
+    expires_minutes: int = 60,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Vygeneruje dočasnou veřejnou URL pro dokument.
+    URL vede na FastAPI endpoint (ne přímo na MinIO).
+    Token je platný po omezenou dobu.
+    """
+    document = db.query(Document).filter(Document.id == document_id).first()
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Omezení platnosti
+    expires_minutes = min(expires_minutes, 1440)  # Max 24 hodin
+    expires_minutes = max(expires_minutes, 1)     # Min 1 minuta
+    
+    # Vygeneruj podepsaný token s document_id a expirací
+    token = token_serializer.dumps({
+        "document_id": document_id,
+        "expires_minutes": expires_minutes
+    })
+    
+    # Sestav veřejnou URL přes FastAPI
+    base_url = settings.api_base_url  # např. "http://localhost:8001"
+    public_url = f"{base_url}/api/v1/documents/public/{token}"
+    
+    return {
+        "url": public_url,
+        "expires_in_minutes": expires_minutes,
+        "filename": document.original_filename,
+        "mime_type": document.mime_type
+    }
+
+
+@router.get("/public/{token}")
+async def serve_public_document(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Veřejný endpoint pro stažení/zobrazení dokumentu pomocí dočasného tokenu.
+    NEVYŽADUJE autentizaci - token sám o sobě je autorizací.
+    Vhodné pro Google Docs Viewer, sdílení, atd.
+    """
+    try:
+        # Ověř a dekóduj token
+        # max_age = 24 hodin v sekundách (maximální možná expirace)
+        data = token_serializer.loads(token, max_age=86400)
+        document_id = data.get("document_id")
+        
+    except SignatureExpired:
+        raise HTTPException(
+            status_code=410, 
+            detail="Odkaz vypršel. Vygenerujte prosím nový."
+        )
+    except BadSignature:
+        raise HTTPException(
+            status_code=400, 
+            detail="Neplatný odkaz."
+        )
+    
+    if not document_id:
+        raise HTTPException(status_code=400, detail="Neplatný token")
+    
+    # Načti dokument z DB
+    document = db.query(Document).filter(Document.id == document_id).first()
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Dokument nenalezen")
+    
+    try:
+        # Stáhni soubor z MinIO
+        response = minio_client.get_object(document.minio_bucket, document.minio_path)
+        content = response.read()
+        response.close()
+        response.release_conn()
+        
+        # Enkóduj filename pro UTF-8 podporu
+        encoded_filename = quote(document.original_filename)
+        
+        return Response(
+            content=content,
+            media_type=document.mime_type,
+            headers={
+                "Content-Disposition": f"inline; filename*=UTF-8''{encoded_filename}",
+                "Content-Length": str(len(content)),
+                "Cache-Control": "private, max-age=3600",  # Cache 1 hodinu
+                # CORS hlavičky pro externí služby (Google Docs Viewer)
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET",
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chyba při načítání dokumentu: {str(e)}")
+
+
 # Preview dokumentu (vrací raw data pro zobrazení)
 @router.get("/{document_id}/preview",
             dependencies=[Depends(require_permissions("documents", PermissionType.READ))]
@@ -413,7 +520,6 @@ async def delete_document(
 
 
 
-# Získání informací o dokumentu (metadata)
 @router.get("/{document_id}",
              dependencies=[Depends(require_permissions("documents", PermissionType.READ))]
             )

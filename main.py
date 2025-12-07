@@ -121,7 +121,7 @@ def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
     from backend.core.routers.customers import router as custemers_router
     from backend.core.routers.products import router as product_router
     from backend.core.routers.deals import router as deal_router
-    from backend.apps.doc.api import   router as att_store_router
+
 
     prefix_arg=f"/{prefix_}/{version}"
     app.include_router(
@@ -179,11 +179,13 @@ def register_routers(app: FastAPI,prefix_="api",version='v1') -> None:
         prefix=f"{prefix_arg}/deals",
         tags=["deals"]
     )
-    app.include_router(
-        att_store_router,
-        prefix=f"{prefix_arg}/documents",
-        tags=["documents"]
-    )
+    if settings.use_blob_storage:
+        from backend.apps.doc.api import router as att_store_router
+        app.include_router(
+            att_store_router,
+            prefix=f"{prefix_arg}/documents",
+            tags=["documents"]
+        )
     logger.info("Routers registered")
 
 
@@ -231,7 +233,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True,
         log_level="info"
     )

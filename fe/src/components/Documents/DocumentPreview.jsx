@@ -1,18 +1,18 @@
 // src/components/Documents/DocumentPreview.jsx
-import { Badge, Button, Modal, ModalBody, ModalHeader, Spinner } from 'flowbite-react';
+import { Button, Modal, ModalBody, ModalHeader, Spinner } from 'flowbite-react';
 import { useEffect, useState } from 'react';
 import {
-    HiArrowLeft,
-    HiArrowRight,
-    HiDocument,
-    HiDocumentText,
-    HiDownload,
-    HiExternalLink,
-    HiZoomIn,
-    HiZoomOut
+  HiDocument,
+  HiDownload,
+  HiExternalLink,
+  HiTable,
+  HiPresentationChartBar,
+  HiZoomIn,
+  HiZoomOut
 } from 'react-icons/hi';
+import { HiDocumentText } from 'react-icons/hi2';
+import api from '../../api/client';
 
-// Formátování velikosti souboru
 const formatFileSize = (bytes) => {
   if (!bytes) return '0 B';
   const k = 1024;
@@ -21,319 +21,285 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Určení typu souboru pro preview
 const getPreviewType = (mimeType, filename) => {
+  if (!mimeType) return 'download';
+  
   const ext = filename?.split('.').pop()?.toLowerCase();
-
-  // Obrázky - nativní podpora
-  if (mimeType?.startsWith('image/')) {
-    return 'image';
+  
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType === 'application/pdf') return 'pdf';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  
+  // Office dokumenty
+  if (['doc', 'docx'].includes(ext) || mimeType.includes('msword') || mimeType.includes('wordprocessingml')) {
+    return 'word';
   }
-
-  // PDF - nativní podpora
-  if (mimeType === 'application/pdf' || ext === 'pdf') {
-    return 'pdf';
+  if (['xls', 'xlsx', 'csv'].includes(ext) || mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+    return 'excel';
   }
-
-  // MS Office - použijeme Office Online Viewer
-  if (['doc', 'docx'].includes(ext) ||
-      mimeType?.includes('msword') ||
-      mimeType?.includes('wordprocessingml')) {
-    return 'office';
+  if (['ppt', 'pptx'].includes(ext) || mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+    return 'powerpoint';
   }
-
-  if (['xls', 'xlsx'].includes(ext) ||
-      mimeType?.includes('spreadsheet') ||
-      mimeType?.includes('excel')) {
-    return 'office';
-  }
-
-  if (['ppt', 'pptx'].includes(ext) ||
-      mimeType?.includes('presentation') ||
-      mimeType?.includes('powerpoint')) {
-    return 'office';
-  }
-
-  // HTML
-  if (mimeType === 'text/html' || ext === 'html' || ext === 'htm') {
-    return 'html';
-  }
-
-  // Text soubory
-  if (mimeType?.startsWith('text/') ||
-      ['txt', 'md', 'json', 'xml', 'csv', 'log'].includes(ext)) {
-    return 'text';
-  }
-
-  // Video
-  if (mimeType?.startsWith('video/')) {
-    return 'video';
-  }
-
-  // Audio
-  if (mimeType?.startsWith('audio/')) {
-    return 'audio';
-  }
-
-  return 'unsupported';
+  
+  return 'download';
 };
 
-// Komponenta pro náhled obrázku
-const ImagePreview = ({ url, filename }) => {
-  const [zoom, setZoom] = useState(100);
-  const [loading, setLoading] = useState(true);
-
-  return (
-    <div className="relative flex flex-col h-full">
-      {/* Zoom controls */}
-      <div className="absolute top-2 right-2 z-10 flex gap-1 bg-white/90 dark:bg-gray-800/90 rounded-lg p-1 shadow">
-        <Button size="xs" color="light" onClick={() => setZoom(z => Math.max(25, z - 25))}>
-          <HiZoomOut className="h-4 w-4" />
-        </Button>
-        <span className="px-2 py-1 text-xs font-medium">{zoom}%</span>
-        <Button size="xs" color="light" onClick={() => setZoom(z => Math.min(200, z + 25))}>
-          <HiZoomIn className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Image container */}
-      <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-100 dark:bg-gray-900 p-4">
-        {loading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Spinner size="xl" />
-          </div>
-        )}
-        <img
-          src={url}
-          alt={filename}
-          style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'center' }}
-          className="max-w-full max-h-full object-contain transition-transform"
-          onLoad={() => setLoading(false)}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Komponenta pro náhled PDF
-const PdfPreview = ({ url }) => {
-  return (
-    <iframe
-      src={url}
-      className="w-full h-full border-0"
-      title="PDF Preview"
-    />
-  );
-};
-
-// Komponenta pro náhled Office dokumentů
-const OfficePreview = ({ url, filename }) => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-      <HiDocumentText className="h-16 w-16 text-gray-400 mb-4" />
-
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-        {filename}
-      </h3>
-
-      <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
-        Pro náhled MS Office dokumentů stáhněte soubor a otevřete ho v příslušné aplikaci,
-        nebo použijte tlačítko níže pro otevření v Office Online.
-      </p>
-
-      <div className="flex gap-3">
-        <Button color="blue" onClick={() => window.open(url, '_blank')}>
-          <HiDownload className="mr-2 h-4 w-4" />
-          Stáhnout
-        </Button>
-      </div>
-
-      <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-sm text-blue-700 dark:text-blue-300">
-        <strong>Tip:</strong> Pro plnou podporu náhledů Office dokumentů
-        můžete integrovat OnlyOffice nebo LibreOffice Online.
-      </div>
-    </div>
-  );
-};
-
-// Komponenta pro náhled textu
-const TextPreview = ({ url, filename }) => {
-  const [content, setContent] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    const fetchContent = async () => {
-      try {
-        const response = await fetch(url);
-        const text = await response.text();
-        setContent(text);
-      } catch (err) {
-        setError('Nepodařilo se načíst obsah souboru');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchContent();
-  }, [url]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Spinner size="xl" />
-      </div>
-    );
+// Ikona podle typu Office dokumentu
+const getOfficeIcon = (type) => {
+  switch (type) {
+    case 'word': return HiDocumentText;
+    case 'excel': return HiTable;
+    case 'powerpoint': return HiPresentationChartBar;
+    default: return HiDocument;
   }
+};
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full text-red-500">
-        {error}
-      </div>
-    );
+// Barva podle typu Office dokumentu
+const getOfficeColor = (type) => {
+  switch (type) {
+    case 'word': return 'text-blue-500';
+    case 'excel': return 'text-green-500';
+    case 'powerpoint': return 'text-orange-500';
+    default: return 'text-gray-500';
   }
-
-  return (
-    <pre className="w-full h-full overflow-auto p-4 bg-gray-50 dark:bg-gray-900 text-sm font-mono text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
-      {content}
-    </pre>
-  );
 };
 
-// Komponenta pro náhled HTML
-const HtmlPreview = ({ url }) => {
-  return (
-    <iframe
-      src={url}
-      className="w-full h-full border-0 bg-white"
-      title="HTML Preview"
-      sandbox="allow-same-origin"
-    />
-  );
+// Název typu dokumentu
+const getOfficeTypeName = (type) => {
+  switch (type) {
+    case 'word': return 'Word dokument';
+    case 'excel': return 'Excel tabulka';
+    case 'powerpoint': return 'PowerPoint prezentace';
+    default: return 'Dokument';
+  }
 };
 
-// Komponenta pro video
-const VideoPreview = ({ url, mimeType }) => {
-  return (
-    <div className="flex items-center justify-center h-full bg-black p-4">
-      <video
-        src={url}
-        controls
-        className="max-w-full max-h-full"
-      >
-        Váš prohlížeč nepodporuje přehrávání videa.
-      </video>
-    </div>
-  );
-};
-
-// Komponenta pro audio
-const AudioPreview = ({ url, filename }) => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full p-8">
-      <HiDocument className="h-16 w-16 text-gray-400 mb-4" />
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-        {filename}
-      </h3>
-      <audio src={url} controls className="w-full max-w-md">
-        Váš prohlížeč nepodporuje přehrávání zvuku.
-      </audio>
-    </div>
-  );
-};
-
-// Komponenta pro nepodporované typy
-const UnsupportedPreview = ({ filename, mimeType, onDownload }) => {
-  return (
-    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-      <HiDocument className="h-16 w-16 text-gray-400 mb-4" />
-
-      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-        {filename}
-      </h3>
-
-      <Badge color="gray" className="mb-4">
-        {mimeType || 'Neznámý typ'}
-      </Badge>
-
-      <p className="text-gray-500 dark:text-gray-400 mb-6">
-        Náhled tohoto typu souboru není podporován.
-        Stáhněte si soubor pro jeho zobrazení.
-      </p>
-
-      <Button color="blue" onClick={onDownload}>
-        <HiDownload className="mr-2 h-4 w-4" />
-        Stáhnout soubor
-      </Button>
-    </div>
-  );
-};
-
-// Hlavní komponenta
 export const DocumentPreview = ({
   open,
-  document,
-  documents = [],
-  currentIndex = 0,
+  document: doc,
   onClose,
   onDownload,
-  onNavigate,
+  // Nastav na true pokud máš veřejně dostupné API (ne localhost)
+  useExternalViewer = false,
 }) => {
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [zoom, setZoom] = useState(100);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [publicUrl, setPublicUrl] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Načtení URL pro preview
+  const previewType = doc ? getPreviewType(doc.mime_type, doc.original_filename) : 'download';
+  const isOfficeType = ['word', 'excel', 'powerpoint'].includes(previewType);
+
   useEffect(() => {
-    if (open && document) {
-      setLoading(true);
-      // Používáme preview endpoint
-      const url = `/api/v1/documents/${document.id}/preview`;
-      setPreviewUrl(url);
-      setLoading(false);
-    } else {
-      setPreviewUrl(null);
+    if (!open || !doc) {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+        setBlobUrl(null);
+      }
+      setPublicUrl(null);
+      setError(null);
+      return;
     }
-  }, [open, document]);
 
-  if (!document) return null;
+    setLoading(true);
+    setError(null);
+    setBlobUrl(null);
+    setPublicUrl(null);
 
-  const previewType = getPreviewType(document.mime_type, document.original_filename || document.filename);
-  const hasNavigation = documents.length > 1;
+    // Pro Office dokumenty s externím viewerem
+    if (isOfficeType && useExternalViewer) {
+      api.get(`/api/v1/documents/${doc.id}/public-url`)
+        .then((response) => {
+          setPublicUrl(response.data.url);
+        })
+        .catch((err) => {
+          console.error('Error getting public URL:', err);
+          setError('Nepodařilo se načíst náhled');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+    // Pro obrázky, PDF, video, audio
+    else if (['image', 'pdf', 'video', 'audio'].includes(previewType)) {
+      api.get(`/api/v1/documents/${doc.id}/preview`, { responseType: 'blob' })
+        .then((response) => {
+          const objectUrl = URL.createObjectURL(response.data);
+          setBlobUrl(objectUrl);
+        })
+        .catch((err) => {
+          console.error('Error loading preview:', err);
+          setError('Nepodařilo se načíst náhled');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, [open, doc?.id, previewType, isOfficeType, useExternalViewer]);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl);
+      }
+    };
+  }, [blobUrl]);
+
+  if (!open || !doc) return null;
+
+  const filename = doc.original_filename || doc.filename;
 
   const renderPreview = () => {
     if (loading) {
       return (
-        <div className="flex items-center justify-center h-full">
+        <div className="h-full flex items-center justify-center">
           <Spinner size="xl" />
         </div>
       );
     }
 
-    if (!previewUrl) return null;
+    if (error) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center p-8">
+          <HiDocument className="h-16 w-16 text-red-400 mb-4" />
+          <p className="text-red-500 mb-4">{error}</p>
+          <Button color="blue" onClick={() => onDownload?.(doc)}>
+            <HiDownload className="mr-2 h-4 w-4" />
+            Stáhnout soubor
+          </Button>
+        </div>
+      );
+    }
 
     switch (previewType) {
       case 'image':
-        return <ImagePreview url={previewUrl} filename={document.original_filename} />;
+        return (
+          <div className="relative h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900 overflow-auto">
+            <div className="absolute top-2 right-2 z-10 flex gap-1 bg-white/90 dark:bg-gray-800/90 rounded-lg p-1 shadow">
+              <Button size="xs" color="light" onClick={() => setZoom(z => Math.max(25, z - 25))}>
+                <HiZoomOut className="h-4 w-4" />
+              </Button>
+              <span className="px-2 py-1 text-xs font-medium">{zoom}%</span>
+              <Button size="xs" color="light" onClick={() => setZoom(z => Math.min(200, z + 25))}>
+                <HiZoomIn className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {blobUrl ? (
+              <img
+                src={blobUrl}
+                alt={filename}
+                style={{ transform: `scale(${zoom / 100})` }}
+                className="max-w-full max-h-full object-contain transition-transform"
+              />
+            ) : (
+              <p className="text-gray-500">Načítám obrázek...</p>
+            )}
+          </div>
+        );
+
       case 'pdf':
-        return <PdfPreview url={previewUrl} />;
-      case 'office':
-        return <OfficePreview url={previewUrl} filename={document.original_filename} />;
-      case 'text':
-        return <TextPreview url={previewUrl} filename={document.original_filename} />;
-      case 'html':
-        return <HtmlPreview url={previewUrl} />;
+        return blobUrl ? (
+          <iframe
+            src={blobUrl}
+            className="w-full h-full border-0"
+            title="PDF Preview"
+          />
+        ) : null;
+
       case 'video':
-        return <VideoPreview url={previewUrl} mimeType={document.mime_type} />;
+        return blobUrl ? (
+          <div className="h-full flex items-center justify-center bg-black">
+            <video src={blobUrl} controls className="max-w-full max-h-full" />
+          </div>
+        ) : null;
+
       case 'audio':
-        return <AudioPreview url={previewUrl} filename={document.original_filename} />;
+        return (
+          <div className="h-full flex flex-col items-center justify-center">
+            <HiDocument className="h-16 w-16 text-gray-400 mb-4" />
+            <p className="text-gray-700 dark:text-gray-300 mb-4">{filename}</p>
+            {blobUrl && <audio src={blobUrl} controls />}
+          </div>
+        );
+
+      // Office dokumenty s externím viewerem
+      case 'word':
+      case 'excel':
+      case 'powerpoint':
+        if (useExternalViewer && publicUrl) {
+          const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(publicUrl)}&embedded=true`;
+          return (
+            <iframe
+              src={googleViewerUrl}
+              className="w-full h-full border-0"
+              title="Office Document Preview"
+            />
+          );
+        }
+        
+        // Fallback - hezký placeholder pro Office dokumenty
+        const OfficeIcon = getOfficeIcon(previewType);
+        const colorClass = getOfficeColor(previewType);
+        const typeName = getOfficeTypeName(previewType);
+        
+        return (
+          <div className="h-full flex flex-col items-center justify-center text-center p-8 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+            <div className="bg-white dark:bg-gray-700 rounded-2xl shadow-lg p-8 max-w-md">
+              <OfficeIcon className={`h-20 w-20 mx-auto mb-4 ${colorClass}`} />
+              
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                {filename}
+              </h3>
+              
+              <p className="text-gray-500 dark:text-gray-400 mb-1">
+                {typeName}
+              </p>
+              
+              <p className="text-sm text-gray-400 dark:text-gray-500 mb-6">
+                {formatFileSize(doc.file_size)}
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                <Button color="blue" onClick={() => onDownload?.(doc)} className="w-full">
+                  <HiDownload className="mr-2 h-5 w-5" />
+                  Stáhnout soubor
+                </Button>
+                
+                {publicUrl && (
+                  <Button color="light" onClick={() => window.open(publicUrl, '_blank')} className="w-full">
+                    <HiExternalLink className="mr-2 h-5 w-5" />
+                    Otevřít v prohlížeči
+                  </Button>
+                )}
+              </div>
+              
+              <p className="mt-6 text-xs text-gray-400 dark:text-gray-500">
+                Pro náhled Office dokumentů stáhněte soubor a otevřete v příslušné aplikaci.
+              </p>
+            </div>
+          </div>
+        );
+
       default:
         return (
-          <UnsupportedPreview
-            filename={document.original_filename}
-            mimeType={document.mime_type}
-            onDownload={() => onDownload?.(document)}
-          />
+          <div className="h-full flex flex-col items-center justify-center text-center p-8">
+            <HiDocument className="h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {filename}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Náhled tohoto typu souboru není podporován.
+            </p>
+            <Button color="blue" onClick={() => onDownload?.(doc)}>
+              <HiDownload className="mr-2 h-4 w-4" />
+              Stáhnout soubor
+            </Button>
+          </div>
         );
     }
   };
@@ -342,56 +308,33 @@ export const DocumentPreview = ({
     <Modal show={open} onClose={onClose} size="7xl">
       <ModalHeader>
         <div className="flex items-center gap-3">
-          <span className="truncate">{document.original_filename || document.filename}</span>
+          <span className="truncate">{filename}</span>
           <span className="text-sm text-gray-500 dark:text-gray-400 font-normal">
-            {formatFileSize(document.file_size)} • {document.mime_type}
+            {formatFileSize(doc.file_size)}
           </span>
         </div>
       </ModalHeader>
 
       <ModalBody className="p-0">
-        {/* Action buttons */}
         <div className="flex items-center justify-end gap-2 p-3 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-          <Button size="sm" color="light" onClick={() => onDownload?.(document)}>
+          <Button size="sm" color="light" onClick={() => onDownload?.(doc)}>
             <HiDownload className="mr-2 h-4 w-4" />
             Stáhnout
           </Button>
-
-          <Button size="sm" color="light" onClick={() => window.open(previewUrl, '_blank')}>
-            <HiExternalLink className="mr-2 h-4 w-4" />
-            Otevřít v novém okně
-          </Button>
+          {(blobUrl || publicUrl) && (
+            <Button 
+              size="sm" 
+              color="light" 
+              onClick={() => window.open(blobUrl || publicUrl, '_blank')}
+            >
+              <HiExternalLink className="mr-2 h-4 w-4" />
+              Otevřít v novém okně
+            </Button>
+          )}
         </div>
 
-        {/* Preview Area */}
-        <div className="relative h-[70vh] bg-gray-100 dark:bg-gray-900">
+        <div className="h-[70vh] bg-gray-100 dark:bg-gray-900">
           {renderPreview()}
-
-          {/* Navigation arrows */}
-          {hasNavigation && (
-            <>
-              <button
-                onClick={() => onNavigate?.(currentIndex - 1)}
-                disabled={currentIndex === 0}
-                className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <HiArrowLeft className="h-6 w-6" />
-              </button>
-
-              <button
-                onClick={() => onNavigate?.(currentIndex + 1)}
-                disabled={currentIndex === documents.length - 1}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/90 dark:bg-gray-800/90 rounded-full shadow hover:bg-white dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <HiArrowRight className="h-6 w-6" />
-              </button>
-
-              {/* Page indicator */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 bg-white/90 dark:bg-gray-800/90 rounded-full text-sm">
-                {currentIndex + 1} / {documents.length}
-              </div>
-            </>
-          )}
         </div>
       </ModalBody>
     </Modal>
